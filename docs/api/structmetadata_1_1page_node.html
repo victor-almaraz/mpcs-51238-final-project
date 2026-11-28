@@ -100,7 +100,7 @@ $(function(){initNavTree('structmetadata_1_1page_node.html',''); initResizable()
 </div><!--header-->
 <div class="contents">
 
-<p>One element of a page's layout (<code>dsl-ui.md</code> §7.1): a group, which holds other elements, or a control or display bound to an OSC address on the page port.  
+<p>One element of a page's layout (<code>dsl-ui.md</code> §7.1): a group, which holds other elements; a control or display bound to an OSC address on the page port; or a space, which has no address.  
  <a href="#details">More...</a></p>
 
 <p><code>#include &lt;<a class="el" href="graph_8h_source.html">espresso/metadata/graph.h</a>&gt;</code></p>
@@ -117,7 +117,7 @@ std::string&#160;</td><td class="memItemRight" valign="bottom"><b>label</b></td>
 <tr class="separator:a7acfc86eff37bc395ab5a8ca2b71670f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a217f603c1e5677b20eebf50f8ac647bd" id="r_a217f603c1e5677b20eebf50f8ac647bd"><td class="memItemLeft" align="right" valign="top"><a id="a217f603c1e5677b20eebf50f8ac647bd" name="a217f603c1e5677b20eebf50f8ac647bd"></a>
 std::string&#160;</td><td class="memItemRight" valign="bottom"><b>address</b></td></tr>
-<tr class="memdesc:a217f603c1e5677b20eebf50f8ac647bd"><td class="mdescLeft">&#160;</td><td class="mdescRight">The OSC address a control sends to or a display shows; empty for a group, and for a control that takes its kind's default address. <br /></td></tr>
+<tr class="memdesc:a217f603c1e5677b20eebf50f8ac647bd"><td class="mdescLeft">&#160;</td><td class="mdescRight">The OSC address a control sends to or a display shows; empty for a group, for a space, and for a control that takes its kind's default address. <br /></td></tr>
 <tr class="separator:a217f603c1e5677b20eebf50f8ac647bd"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2833f0ca3958fe89f80b05f578252114" id="r_a2833f0ca3958fe89f80b05f578252114"><td class="memItemLeft" align="right" valign="top"><a id="a2833f0ca3958fe89f80b05f578252114" name="a2833f0ca3958fe89f80b05f578252114"></a>
 std::map&lt; std::string, <a class="el" href="namespacemetadata.html#a1ec62dc3a532573cf2bccdc1e57fd980">paramValue</a>, std::less&lt;&gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>params</b></td></tr>
@@ -140,8 +140,8 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>operator==</b> (const
 <tr class="separator:a3d1ee8a994731d9ff287d9b5e6811abf"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>One element of a page's layout (<code>dsl-ui.md</code> §7.1): a group, which holds other elements, or a control or display bound to an OSC address on the page port. </p>
-<p><code><a class="el" href="namespacemetadata.html#acdbfbddc352d8cfea72727f458e27fa3" title="Every kind of layout element: the groups, then the controls, then the displays.">pageKinds()</a></code> (<code><a class="el" href="page_spec_8h.html" title="The kinds of a page&#39;s layout (dsl-ui.md §7.1): groups, which hold other kinds, and controls,...">pageSpec.h</a></code>) lists the kinds and the parameters of each. </p>
+<div class="textblock"><p>One element of a page's layout (<code>dsl-ui.md</code> §7.1): a group, which holds other elements; a control or display bound to an OSC address on the page port; or a space, which has no address. </p>
+<p><code><a class="el" href="namespacemetadata.html#acdbfbddc352d8cfea72727f458e27fa3" title="Every kind of layout element: the groups, then the controls, then the displays, then the spaces.">pageKinds()</a></code> (<code><a class="el" href="page_spec_8h.html" title="The kinds of a page&#39;s layout (dsl-ui.md §7.1): groups, which hold other kinds; controls and displays,...">pageSpec.h</a></code>) lists the kinds and the parameters of each. </p>
 </div><hr/>The documentation for this struct was generated from the following file:<ul>
 <li>include/espresso/metadata/<a class="el" href="graph_8h_source.html">graph.h</a></li>
 </ul>

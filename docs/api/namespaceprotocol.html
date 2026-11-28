@@ -199,17 +199,17 @@ Typedefs</h2></td></tr>
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="enum-members" name="enum-members"></a>
 Enumerations</h2></td></tr>
 <tr class="memitem:a7b8ae92a4043627d3007ae10b423b3c4" id="r_a7b8ae92a4043627d3007ae10b423b3c4"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7b8ae92a4043627d3007ae10b423b3c4">errorCode</a> : std::int32_t { <br />
-&#160;&#160;<b>unknownAddress</b> = 1
-, <b>malformedArguments</b> = 2
-, <b>notConnected</b> = 3
-, <b>versionMismatch</b> = 4
+&#160;&#160;<a class="el" href="#a7b8ae92a4043627d3007ae10b423b3c4a20d26c033237e51ef5ecadfaaedca2d7">unknownAddress</a> = 1
+, <a class="el" href="#a7b8ae92a4043627d3007ae10b423b3c4ad038a6f23080a3642fff118a255c074b">malformedArguments</a> = 2
+, <a class="el" href="#a7b8ae92a4043627d3007ae10b423b3c4a9c51b2fe3e2a82bdba58bd5317a183a2">notConnected</a> = 3
+, <a class="el" href="#a7b8ae92a4043627d3007ae10b423b3c4a127acef89a71e587d2a7da7d78e50bad">versionMismatch</a> = 4
 , <br />
-&#160;&#160;<b>irIncomplete</b> = 5
-, <b>irChecksumMismatch</b> = 6
-, <b>irInvalid</b> = 7
-, <b>unknownPlan</b> = 8
+&#160;&#160;<a class="el" href="#a7b8ae92a4043627d3007ae10b423b3c4a4ec3d2d68483a95dac3cd5b20ca90902">irIncomplete</a> = 5
+, <a class="el" href="#a7b8ae92a4043627d3007ae10b423b3c4a284061fbc9193c23ebe03b432957cf57">irChecksumMismatch</a> = 6
+, <a class="el" href="#a7b8ae92a4043627d3007ae10b423b3c4a59c96918292057b5c43d30b7f25d4266">irInvalid</a> = 7
+, <a class="el" href="#a7b8ae92a4043627d3007ae10b423b3c4acfd9a32dbaea3303739365ebbb9c0412">unknownPlan</a> = 8
 , <br />
-&#160;&#160;<b>deviceError</b> = 9
+&#160;&#160;<a class="el" href="#a7b8ae92a4043627d3007ae10b423b3c4ac9f1f5c26e8b854f6cfd06f11028167b">deviceError</a> = 9
 , <a class="el" href="#a7b8ae92a4043627d3007ae10b423b3c4a6d6286d8724d85d043fd074a70201153">signalFault</a> = 10
 , <a class="el" href="#a7b8ae92a4043627d3007ae10b423b3c4a9cf1f390bad92829397cf102c1adb84c">fileError</a> = 11
 <br />
@@ -309,7 +309,7 @@ constexpr std::uint16_t&#160;</td><td class="memItemRight" valign="bottom"><b>de
 <tr class="separator:a4dc0c06337c1cc25f88917269e371df2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5c32a48dcd948d4bd3f52bdfe804aca5" id="r_a5c32a48dcd948d4bd3f52bdfe804aca5"><td class="memItemLeft" align="right" valign="top"><a id="a5c32a48dcd948d4bd3f52bdfe804aca5" name="a5c32a48dcd948d4bd3f52bdfe804aca5"></a>
 constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>defaultTimeoutMs</b> = 250</td></tr>
-<tr class="memdesc:a5c32a48dcd948d4bd3f52bdfe804aca5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reply timeout and retry count for requests (<code>protocol.md</code> §3.2). <br /></td></tr>
+<tr class="memdesc:a5c32a48dcd948d4bd3f52bdfe804aca5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Time to wait for each reply to a request, in milliseconds (<code>protocol.md</code> §3.2). <br /></td></tr>
 <tr class="separator:a5c32a48dcd948d4bd3f52bdfe804aca5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a150779c49ecb1fc05d5ba8b2ac326e83" id="r_a150779c49ecb1fc05d5ba8b2ac326e83"><td class="memItemLeft" align="right" valign="top"><a id="a150779c49ecb1fc05d5ba8b2ac326e83" name="a150779c49ecb1fc05d5ba8b2ac326e83"></a>
 constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>defaultRetries</b> = 3</td></tr>
@@ -385,7 +385,25 @@ constexpr std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>chun
 
 <p>Error codes carried by <code>/fail</code> (<code>protocol.md</code> §8). </p>
 <table class="fieldtable">
-<tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="a7b8ae92a4043627d3007ae10b423b3c4a6d6286d8724d85d043fd074a70201153" name="a7b8ae92a4043627d3007ae10b423b3c4a6d6286d8724d85d043fd074a70201153"></a>signalFault&#160;</td><td class="fielddoc"><p>A sink muted itself: non-finite samples. </p>
+<tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="a7b8ae92a4043627d3007ae10b423b3c4a20d26c033237e51ef5ecadfaaedca2d7" name="a7b8ae92a4043627d3007ae10b423b3c4a20d26c033237e51ef5ecadfaaedca2d7"></a>unknownAddress&#160;</td><td class="fielddoc"><p>No handler for the address. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="a7b8ae92a4043627d3007ae10b423b3c4ad038a6f23080a3642fff118a255c074b" name="a7b8ae92a4043627d3007ae10b423b3c4ad038a6f23080a3642fff118a255c074b"></a>malformedArguments&#160;</td><td class="fielddoc"><p>Arguments missing, of the wrong type, or out of range. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="a7b8ae92a4043627d3007ae10b423b3c4a9c51b2fe3e2a82bdba58bd5317a183a2" name="a7b8ae92a4043627d3007ae10b423b3c4a9c51b2fe3e2a82bdba58bd5317a183a2"></a>notConnected&#160;</td><td class="fielddoc"><p>The client has not completed <code>/hello</code> </p>
+</td></tr>
+<tr><td class="fieldname"><a id="a7b8ae92a4043627d3007ae10b423b3c4a127acef89a71e587d2a7da7d78e50bad" name="a7b8ae92a4043627d3007ae10b423b3c4a127acef89a71e587d2a7da7d78e50bad"></a>versionMismatch&#160;</td><td class="fielddoc"><p>The client's metadata version differs from the server's. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="a7b8ae92a4043627d3007ae10b423b3c4a4ec3d2d68483a95dac3cd5b20ca90902" name="a7b8ae92a4043627d3007ae10b423b3c4a4ec3d2d68483a95dac3cd5b20ca90902"></a>irIncomplete&#160;</td><td class="fielddoc"><p>The assembled IR size differs from <code>/ir.begin</code> </p>
+</td></tr>
+<tr><td class="fieldname"><a id="a7b8ae92a4043627d3007ae10b423b3c4a284061fbc9193c23ebe03b432957cf57" name="a7b8ae92a4043627d3007ae10b423b3c4a284061fbc9193c23ebe03b432957cf57"></a>irChecksumMismatch&#160;</td><td class="fielddoc"><p>The assembled IR's CRC-32 differs from <code>/ir.begin</code> </p>
+</td></tr>
+<tr><td class="fieldname"><a id="a7b8ae92a4043627d3007ae10b423b3c4a59c96918292057b5c43d30b7f25d4266" name="a7b8ae92a4043627d3007ae10b423b3c4a59c96918292057b5c43d30b7f25d4266"></a>irInvalid&#160;</td><td class="fielddoc"><p>The announcement or the IR is invalid, or the plan cannot be built. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="a7b8ae92a4043627d3007ae10b423b3c4acfd9a32dbaea3303739365ebbb9c0412" name="a7b8ae92a4043627d3007ae10b423b3c4acfd9a32dbaea3303739365ebbb9c0412"></a>unknownPlan&#160;</td><td class="fielddoc"><p>No such plan, or it was already played. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="a7b8ae92a4043627d3007ae10b423b3c4ac9f1f5c26e8b854f6cfd06f11028167b" name="a7b8ae92a4043627d3007ae10b423b3c4ac9f1f5c26e8b854f6cfd06f11028167b"></a>deviceError&#160;</td><td class="fielddoc"><p>A device failed. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="a7b8ae92a4043627d3007ae10b423b3c4a6d6286d8724d85d043fd074a70201153" name="a7b8ae92a4043627d3007ae10b423b3c4a6d6286d8724d85d043fd074a70201153"></a>signalFault&#160;</td><td class="fielddoc"><p>A sink muted itself: non-finite samples. </p>
 </td></tr>
 <tr><td class="fieldname"><a id="a7b8ae92a4043627d3007ae10b423b3c4a9cf1f390bad92829397cf102c1adb84c" name="a7b8ae92a4043627d3007ae10b423b3c4a9cf1f390bad92829397cf102c1adb84c"></a>fileError&#160;</td><td class="fielddoc"><p>A buffer could not be saved to its file. </p>
 </td></tr>

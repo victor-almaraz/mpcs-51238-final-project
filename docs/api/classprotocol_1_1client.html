@@ -117,9 +117,8 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a3b2ab6db5d79e3311d5993333d0c0a11" id="r_a3b2ab6db5d79e3311d5993333d0c0a11"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3b2ab6db5d79e3311d5993333d0c0a11">client</a> (<a class="el" href="structprotocol_1_1client_options.html">clientOptions</a> options={}, <a class="el" href="#a459ce913c2713d6bf8ebf62ff826daa6">listener</a> unsolicited={})</td></tr>
 <tr class="memdesc:a3b2ab6db5d79e3311d5993333d0c0a11"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a client for <code>options</code>.  <br /></td></tr>
 <tr class="separator:a3b2ab6db5d79e3311d5993333d0c0a11"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a07d6e732db9b8432f60b8786d57716c6" id="r_a07d6e732db9b8432f60b8786d57716c6"><td class="memItemLeft" align="right" valign="top"><a id="a07d6e732db9b8432f60b8786d57716c6" name="a07d6e732db9b8432f60b8786d57716c6"></a>
-&#160;</td><td class="memItemRight" valign="bottom"><b>~client</b> ()</td></tr>
-<tr class="memdesc:a07d6e732db9b8432f60b8786d57716c6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sends <code>/notify 0</code> without waiting for the reply, so the server stops sending notifications to this client's port, then stops the receiver thread. <br /></td></tr>
+<tr class="memitem:a07d6e732db9b8432f60b8786d57716c6" id="r_a07d6e732db9b8432f60b8786d57716c6"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a07d6e732db9b8432f60b8786d57716c6">~client</a> ()</td></tr>
+<tr class="memdesc:a07d6e732db9b8432f60b8786d57716c6"><td class="mdescLeft">&#160;</td><td class="mdescRight">When a <code>/hello</code> succeeded, sends <code>/notify 0</code> without waiting for the reply, so the server stops sending notifications to this client's port.  <br /></td></tr>
 <tr class="separator:a07d6e732db9b8432f60b8786d57716c6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a58c65f23c0eff2cea87ae5488a0368ff" id="r_a58c65f23c0eff2cea87ae5488a0368ff"><td class="memItemLeft" align="right" valign="top"><a id="a58c65f23c0eff2cea87ae5488a0368ff" name="a58c65f23c0eff2cea87ae5488a0368ff"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>client</b> (const <a class="el" href="classprotocol_1_1client.html">client</a> &amp;)=delete</td></tr>
@@ -186,6 +185,26 @@ std::chrono::steady_clock::time_point&#160;</td><td class="memItemRight" valign=
 
 </div>
 </div>
+<a id="a07d6e732db9b8432f60b8786d57716c6" name="a07d6e732db9b8432f60b8786d57716c6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a07d6e732db9b8432f60b8786d57716c6">&#9670;&#160;</a></span>~client()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">protocol::client::~client </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>When a <code>/hello</code> succeeded, sends <code>/notify 0</code> without waiting for the reply, so the server stops sending notifications to this client's port. </p>
+<p>Then stops the receiver thread. </p>
+
+</div>
+</div>
 <h2 class="groupheader">Member Function Documentation</h2>
 <a id="ad28be6484a37d7150d6ae10ed9d986d3" name="ad28be6484a37d7150d6ae10ed9d986d3"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ad28be6484a37d7150d6ae10ed9d986d3">&#9670;&#160;</a></span>open()</h2>
@@ -227,7 +246,7 @@ std::chrono::steady_clock::time_point&#160;</td><td class="memItemRight" valign=
 </div><div class="memdoc">
 
 <p>Transfers <code>payload</code> as plan <code>planId:</code> <code>/ir.begin</code>, chunks, and <code>/ir.end</code>, resending missing chunks (§6). </p>
-<p>After every <code>chunksPerWindow</code> chunks it waits for <code>/synced</code>, so a burst never overflows a small server receive buffer. Returns an error message on failure. </p>
+<p>After every <code>chunksPerWindow</code> chunks it waits for <code>/synced</code>, so a burst never overflows a small server receive buffer. On failure, returns the error and, when the server named one, the failing node or buffer. </p>
 
 </div>
 </div>

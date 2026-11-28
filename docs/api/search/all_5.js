@@ -41,7 +41,7 @@ var searchData=
   ['floatcontrol_38',['floatControl',['../namespaceprimitives.html#af4486f217de84f5b6f54b3a4e0d06c21',1,'primitives']]],
   ['floatcontrolscope_39',['floatControlScope',['../classprimitives_1_1float_control_scope.html',1,'primitives::floatControlScope'],['../classprimitives_1_1float_control_scope.html#abf9502f4a8454ddafe30fe7e8db1d7ac',1,'primitives::floatControlScope::floatControlScope()']]],
   ['floatexceptionflags_40',['floatExceptionFlags',['../namespaceprimitives.html#a58206155ee71eaef8610ff1c7ea641a5',1,'primitives']]],
-  ['floating_41',['floating',['../structinterpreter_1_1datum.html#a607d5be6ff700d281229083cb43c7f8f',1,'interpreter::datum::floating'],['../namespaceinterpreter.html#abd1837bfd91be179515c8cff55ef3be0a374515b23d6f106696387776a6077d17',1,'interpreter::floating']]],
+  ['floating_41',['floating',['../structinterpreter_1_1datum.html#a607d5be6ff700d281229083cb43c7f8f',1,'interpreter::datum::floating'],['../namespaceinterpreter.html#abd1837bfd91be179515c8cff55ef3be0a374515b23d6f106696387776a6077d17',1,'interpreter::floating'],['../namespaceinterpreter.html#a0d0ea459693216b52a15a178451ed251a374515b23d6f106696387776a6077d17',1,'interpreter::floating']]],
   ['floatmode_42',['floatMode',['../namespaceprimitives.html#ad54815edb43a486bddf14de3fe282591',1,'primitives']]],
   ['footprintof_43',['footprintOf',['../namespacemetadata.html#af4607fc4b8a10914b2bf8010e2246926',1,'metadata']]],
   ['form_44',['form',['../structworkspace_1_1run_request.html#ad22f7d824f0a003015853d3ad3df2a2c',1,'workspace::runRequest']]],

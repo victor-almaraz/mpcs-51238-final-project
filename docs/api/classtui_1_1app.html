@@ -110,6 +110,10 @@ Public Member Functions</h2></td></tr>
 &#160;</td><td class="memItemRight" valign="bottom"><b>app</b> (<a class="el" href="structtui_1_1app_options.html">appOptions</a> options)</td></tr>
 <tr class="memdesc:a9088ca2e7c271fb21a139a08623ffdc5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Loads settings, opens the files in <code>options</code>, and starts the interpreter thread. <br /></td></tr>
 <tr class="separator:a9088ca2e7c271fb21a139a08623ffdc5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a790266eba3399fcef471a60edebd721b" id="r_a790266eba3399fcef471a60edebd721b"><td class="memItemLeft" align="right" valign="top"><a id="a790266eba3399fcef471a60edebd721b" name="a790266eba3399fcef471a60edebd721b"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>~app</b> ()</td></tr>
+<tr class="memdesc:a790266eba3399fcef471a60edebd721b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Writes settings that a drag or scroll changed, then stops the interpreter thread. <br /></td></tr>
+<tr class="separator:a790266eba3399fcef471a60edebd721b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae8273004ee24981e99dcbb6e63e60b6a" id="r_ae8273004ee24981e99dcbb6e63e60b6a"><td class="memItemLeft" align="right" valign="top"><a id="ae8273004ee24981e99dcbb6e63e60b6a" name="ae8273004ee24981e99dcbb6e63e60b6a"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>app</b> (const <a class="el" href="classtui_1_1app.html">app</a> &amp;)=delete</td></tr>
 <tr class="separator:ae8273004ee24981e99dcbb6e63e60b6a"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -131,9 +135,8 @@ int&#160;</td><td class="memItemRight" valign="bottom"><b>run</b> ()</td></tr>
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>handleKey</b> (std::string_view key)</td></tr>
 <tr class="memdesc:ae39bd9e9c820973f05e636a2cf954a4f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Handles one key in <a class="el" href="keymap_8h.html" title="Key binding schemes as data, and the state machine that resolves key sequences to command names (tui....">keymap.h</a> notation. Returns false if ignored. <br /></td></tr>
 <tr class="separator:ae39bd9e9c820973f05e636a2cf954a4f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afe71d1f6770916c7ccda44efb3f01430" id="r_afe71d1f6770916c7ccda44efb3f01430"><td class="memItemLeft" align="right" valign="top"><a id="afe71d1f6770916c7ccda44efb3f01430" name="afe71d1f6770916c7ccda44efb3f01430"></a>
-bool&#160;</td><td class="memItemRight" valign="bottom"><b>handleMouse</b> (const ftxui::Mouse &amp;mouse)</td></tr>
-<tr class="memdesc:afe71d1f6770916c7ccda44efb3f01430"><td class="mdescLeft">&#160;</td><td class="mdescRight">Handles one mouse event in screen coordinates. <br /></td></tr>
+<tr class="memitem:afe71d1f6770916c7ccda44efb3f01430" id="r_afe71d1f6770916c7ccda44efb3f01430"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afe71d1f6770916c7ccda44efb3f01430">handleMouse</a> (const ftxui::Mouse &amp;mouse)</td></tr>
+<tr class="memdesc:afe71d1f6770916c7ccda44efb3f01430"><td class="mdescLeft">&#160;</td><td class="mdescRight">Handles one mouse event in screen coordinates.  <br /></td></tr>
 <tr class="separator:afe71d1f6770916c7ccda44efb3f01430"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a60c190049aaafcc2e3b7a5ab3f125fe4" id="r_a60c190049aaafcc2e3b7a5ab3f125fe4"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a60c190049aaafcc2e3b7a5ab3f125fe4">runCommand</a> (std::string_view name, bool shifted=false)</td></tr>
 <tr class="memdesc:a60c190049aaafcc2e3b7a5ab3f125fe4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Runs the command named <code>name</code> (<code>tui.md</code> §8.1).  <br /></td></tr>
@@ -208,6 +211,26 @@ std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b>overlayNa
 <div class="textblock"><p>The editor. </p>
 <p>Every method runs on the UI thread. The class can be driven without a terminal: feed keys with <a class="el" href="#ae39bd9e9c820973f05e636a2cf954a4f" title="Handles one key in keymap.h notation. Returns false if ignored.">handleKey()</a>, mouse events with <a class="el" href="#afe71d1f6770916c7ccda44efb3f01430" title="Handles one mouse event in screen coordinates.">handleMouse()</a>, and draw with <a class="el" href="#aa2b0ecf8dd7ddb15df8abf9a8fec4938" title="Builds the screen.">render()</a>. </p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
+<a id="afe71d1f6770916c7ccda44efb3f01430" name="afe71d1f6770916c7ccda44efb3f01430"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afe71d1f6770916c7ccda44efb3f01430">&#9670;&#160;</a></span>handleMouse()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool tui::app::handleMouse </td>
+          <td>(</td>
+          <td class="paramtype">const ftxui::Mouse &amp;</td>          <td class="paramname"><span class="paramname"><em>mouse</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Handles one mouse event in screen coordinates. </p>
+<p>Returns true when the event was handled, so the screen is drawn again. </p>
+
+</div>
+</div>
 <a id="aaaf4ba08e5911f923811a353b5590486" name="aaaf4ba08e5911f923811a353b5590486"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#aaaf4ba08e5911f923811a353b5590486">&#9670;&#160;</a></span>openFile()</h2>
 
@@ -268,7 +291,7 @@ std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b>overlayNa
 </div><div class="memdoc">
 
 <p>Runs the command named <code>name</code> (<code>tui.md</code> §8.1). </p>
-<p>Returns false for an unknown name. </p>
+<p><code>shifted</code> is true when Shift was held, so a movement command extends a Shift selection. Returns false for an unknown name. </p>
 
 </div>
 </div>

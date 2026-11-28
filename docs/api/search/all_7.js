@@ -24,5 +24,6 @@ var searchData=
   ['hittest_21',['hitTest',['../namespacetui.html#a8a82ef8bb2398dad24e3bde6e1c6f93c',1,'tui']]],
   ['hosttime_22',['hostTime',['../structprimitives_1_1block_context.html#ac908edf5640c7a4578032ac7599d806a',1,'primitives::blockContext']]],
   ['hover_23',['hover',['../structtui_1_1control_states.html#a0f6f828713353641779065ec5ee48e2a',1,'tui::controlStates']]],
-  ['httpmethod_24',['httpMethod',['../namespaceprimitives.html#a8a735e57db0563c4a30f7ea929ddad34',1,'primitives']]]
+  ['httpmethod_24',['httpMethod',['../namespaceprimitives.html#a8a735e57db0563c4a30f7ea929ddad34',1,'primitives']]],
+  ['hz_25',['hz',['../namespaceinterpreter.html#a208ed770edbaf0a5c1a59944b29272c7a04388fc73213bfcf1b4a2e50f0817062',1,'interpreter']]]
 ];

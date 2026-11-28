@@ -1,5 +1,7 @@
 var classprotocol_1_1engine =
 [
+    [ "engine", "classprotocol_1_1engine.html#ad865a64163527f0a2768253d315be153", null ],
+    [ "~engine", "classprotocol_1_1engine.html#a8b7654e24adbf45746f289affe9dc8ec", null ],
     [ "control", "classprotocol_1_1engine.html#a88eca844a0e065f1ca5698ec6d4d549d", null ],
     [ "counters", "classprotocol_1_1engine.html#ac37ce34a09822592ad982663352c04a0", null ],
     [ "hasPlan", "classprotocol_1_1engine.html#ac17c7c4f8e9f2a23601c28f2d17ec913", null ],

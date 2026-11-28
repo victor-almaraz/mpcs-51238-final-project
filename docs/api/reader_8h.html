@@ -101,7 +101,7 @@ $(function(){initNavTree('reader_8h.html',''); initResizable(); });
 </div><!--header-->
 <div class="contents">
 
-<p>Reader: turns source text into syntax trees with source spans (<code>interpreter.md</code> §3).  
+<p>Reader: turns source text into syntax trees with source spans (<code><a class="el" href="namespaceinterpreter.html#a0d0ea459693216b52a15a178451ed251a6ba8844da718b4a65f60dbfd0d92d6ef" title="[ ... ], its elements in datum::items">interpreter.md</a></code> §3).  
 <a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;cstdint&gt;</code><br />
 <code>#include &lt;optional&gt;</code><br />
@@ -115,7 +115,7 @@ $(function(){initNavTree('reader_8h.html',''); initResizable(); });
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
 Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structinterpreter_1_1source_span.html">interpreter::sourceSpan</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Location of a datum in its source file (<code>interpreter.md</code> §3.2).  <a href="structinterpreter_1_1source_span.html#details">More...</a><br /></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Location of a datum in its source file (<code><a class="el" href="namespaceinterpreter.html#a0d0ea459693216b52a15a178451ed251a6ba8844da718b4a65f60dbfd0d92d6ef" title="[ ... ], its elements in datum::items">interpreter.md</a></code> §3.2).  <a href="structinterpreter_1_1source_span.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structinterpreter_1_1quantity_literal.html">interpreter::quantityLiteral</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A unit literal as written: its numeric value and suffix.  <a href="structinterpreter_1_1quantity_literal.html#details">More...</a><br /></td></tr>
@@ -138,22 +138,22 @@ Namespaces</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="enum-members" name="enum-members"></a>
 Enumerations</h2></td></tr>
-<tr class="memitem:a0d0ea459693216b52a15a178451ed251" id="r_a0d0ea459693216b52a15a178451ed251"><td class="memItemLeft" align="right" valign="top"><a id="a0d0ea459693216b52a15a178451ed251" name="a0d0ea459693216b52a15a178451ed251"></a>enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceinterpreter.html#a0d0ea459693216b52a15a178451ed251">interpreter::datumKind</a> : std::uint8_t { <br />
-&#160;&#160;<b>nil</b>
-, <b>boolean</b>
-, <b>integer</b>
-, <b>floating</b>
+<tr class="memitem:a0d0ea459693216b52a15a178451ed251" id="r_a0d0ea459693216b52a15a178451ed251"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceinterpreter.html#a0d0ea459693216b52a15a178451ed251">interpreter::datumKind</a> : std::uint8_t { <br />
+&#160;&#160;<a class="el" href="namespaceinterpreter.html#a0d0ea459693216b52a15a178451ed251a852438d026c018c4307b916406f98c62">interpreter::nil</a>
+, <a class="el" href="namespaceinterpreter.html#a0d0ea459693216b52a15a178451ed251a84e2c64f38f78ba3ea5c905ab5a2da27">interpreter::boolean</a>
+, <a class="el" href="namespaceinterpreter.html#a0d0ea459693216b52a15a178451ed251a157db7df530023575515d366c9b672e8">interpreter::integer</a>
+, <a class="el" href="namespaceinterpreter.html#a0d0ea459693216b52a15a178451ed251a374515b23d6f106696387776a6077d17">interpreter::floating</a>
 , <br />
-&#160;&#160;<b>quantity</b>
-, <b>string</b>
-, <b>keyword</b>
-, <b>symbol</b>
+&#160;&#160;<a class="el" href="namespaceinterpreter.html#a0d0ea459693216b52a15a178451ed251a221d2a4bfdae13dbd5aeff3b02adb8c1">interpreter::quantity</a>
+, <a class="el" href="namespaceinterpreter.html#a0d0ea459693216b52a15a178451ed251ab45cffe084dd3d20d928bee85e7b0f21">interpreter::string</a>
+, <a class="el" href="namespaceinterpreter.html#a0d0ea459693216b52a15a178451ed251ad7df5b64df1181ef1d62d646a13aa860">interpreter::keyword</a>
+, <a class="el" href="namespaceinterpreter.html#a0d0ea459693216b52a15a178451ed251a97bff26855a8bfa63e05d5477e794b24">interpreter::symbol</a>
 , <br />
-&#160;&#160;<b>list</b>
-, <b>vector</b>
+&#160;&#160;<a class="el" href="namespaceinterpreter.html#a0d0ea459693216b52a15a178451ed251a10ae9fc7d453b0dd525d0edf2ede7961">interpreter::list</a>
+, <a class="el" href="namespaceinterpreter.html#a0d0ea459693216b52a15a178451ed251a6ba8844da718b4a65f60dbfd0d92d6ef">interpreter::vector</a>
 <br />
  }</td></tr>
-<tr class="memdesc:a0d0ea459693216b52a15a178451ed251"><td class="mdescLeft">&#160;</td><td class="mdescRight">Kind of a syntax-tree node. <br /></td></tr>
+<tr class="memdesc:a0d0ea459693216b52a15a178451ed251"><td class="mdescLeft">&#160;</td><td class="mdescRight">Kind of a syntax-tree node.  <a href="namespaceinterpreter.html#a0d0ea459693216b52a15a178451ed251">More...</a><br /></td></tr>
 <tr class="separator:a0d0ea459693216b52a15a178451ed251"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
@@ -164,7 +164,7 @@ Functions</h2></td></tr>
 <tr class="separator:afc76d25c72c2726bdc4bab73ccda32ed"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>Reader: turns source text into syntax trees with source spans (<code>interpreter.md</code> §3). </p>
+<div class="textblock"><p>Reader: turns source text into syntax trees with source spans (<code><a class="el" href="namespaceinterpreter.html#a0d0ea459693216b52a15a178451ed251a6ba8844da718b4a65f60dbfd0d92d6ef" title="[ ... ], its elements in datum::items">interpreter.md</a></code> §3). </p>
 </div></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->

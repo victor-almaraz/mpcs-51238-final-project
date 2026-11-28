@@ -146,7 +146,7 @@ constexpr std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b
 </div><div class="memdoc">
 
 <p>The document that draws <code>layout</code>, a tree whose root is a <code>page</code>; the same layout gives the same text. </p>
-<p>Parameters its kind does not have are left out. A <code>served</code> page, the one the server serves, loads itself again when the server sends <code>reloadAddress</code>, its value controls keeping the values the player set; a page written into a project (<code>--page</code>, Save Page), which the layout no longer draws, does not. </p>
+<p>Parameters its kind does not have are left out. A <code>served</code> page, the one the server serves, reloads when the server sends <code>reloadAddress</code>, and its value controls keep the values the player set across the reload. A page written into a project (<code>--page</code>, Save Page) does not follow later changes to the layout, so it does neither. </p>
 
 </div>
 </div>

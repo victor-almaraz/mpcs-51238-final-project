@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['gapbuffer_0',['gapBuffer',['../classtui_1_1gap_buffer.html',1,'tui::gapBuffer'],['../classtui_1_1gap_buffer.html#a82c0b050fbc549ac81679f3559408dd5',1,'tui::gapBuffer::gapBuffer()']]],
+  ['gapbuffer_0',['gapBuffer',['../classtui_1_1gap_buffer.html',1,'tui::gapBuffer'],['../classtui_1_1gap_buffer.html#aa04a0c52269a1903e2e11bf3b902902f',1,'tui::gapBuffer::gapBuffer()=default'],['../classtui_1_1gap_buffer.html#a82c0b050fbc549ac81679f3559408dd5',1,'tui::gapBuffer::gapBuffer(std::string_view text)']]],
   ['generation_1',['generation',['../classprimitives_1_1io_hub.html#a9775bf15649b04739e72ebc260ea972a',1,'primitives::ioHub']]],
   ['generationwatch_2',['generationWatch',['../classprimitives_1_1generation_watch.html',1,'primitives']]],
   ['generator_3',['generator',['../namespacemetadata.html#ae36ab590b8c549eba95dcedb495426acadac9630aec642a428cd73f4be0a03569',1,'metadata']]],

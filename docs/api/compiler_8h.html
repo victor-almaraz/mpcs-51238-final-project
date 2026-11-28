@@ -101,7 +101,7 @@ $(function(){initNavTree('compiler_8h.html',''); initResizable(); });
 </div><!--header-->
 <div class="contents">
 
-<p>Compiles a source file to a validated graph (<code>interpreter.md</code> §2): read, evaluate, lower mappers, assign node IDs, sort, and validate.  
+<p>Compiles a source file to a validated graph (<code><a class="el" href="namespaceinterpreter.html#a0d0ea459693216b52a15a178451ed251a6ba8844da718b4a65f60dbfd0d92d6ef" title="[ ... ], its elements in datum::items">interpreter.md</a></code> §2): read, evaluate, lower mappers, assign node IDs, sort, and validate.  
 <a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;cstddef&gt;</code><br />
 <code>#include &lt;cstdint&gt;</code><br />
@@ -128,7 +128,7 @@ Classes</h2></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A call that led to an error.  <a href="structinterpreter_1_1call_site.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structinterpreter_1_1compile_error.html">interpreter::compileError</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">One compilation error (<code>interpreter.md</code> §5.4).  <a href="structinterpreter_1_1compile_error.html#details">More...</a><br /></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">One compilation error (<code><a class="el" href="namespaceinterpreter.html#a0d0ea459693216b52a15a178451ed251a6ba8844da718b4a65f60dbfd0d92d6ef" title="[ ... ], its elements in datum::items">interpreter.md</a></code> §5.4).  <a href="structinterpreter_1_1compile_error.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structinterpreter_1_1compile_result.html">interpreter::compileResult</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Result of a compilation.  <a href="structinterpreter_1_1compile_result.html#details">More...</a><br /></td></tr>
@@ -145,11 +145,11 @@ Namespaces</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a2c1f631d72f2bf564ad8079b38cfcefe" id="r_a2c1f631d72f2bf564ad8079b38cfcefe"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structinterpreter_1_1compile_result.html">compileResult</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceinterpreter.html#a2c1f631d72f2bf564ad8079b38cfcefe">interpreter::compile</a> (std::string_view source, std::string_view file, const <a class="el" href="structinterpreter_1_1compile_options.html">compileOptions</a> &amp;options={})</td></tr>
+<tr class="memitem:a2c1f631d72f2bf564ad8079b38cfcefe" id="r_a2c1f631d72f2bf564ad8079b38cfcefe"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structinterpreter_1_1compile_result.html">compileResult</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceinterpreter.html#a2c1f631d72f2bf564ad8079b38cfcefe">interpreter::compile</a> (std::string_view source, std::string_view file, <a class="el" href="namespaceinterpreter.html#a0d0ea459693216b52a15a178451ed251a6ba8844da718b4a65f60dbfd0d92d6ef">const</a> <a class="el" href="structinterpreter_1_1compile_options.html">compileOptions</a> &amp;options={})</td></tr>
 <tr class="memdesc:a2c1f631d72f2bf564ad8079b38cfcefe"><td class="mdescLeft">&#160;</td><td class="mdescRight">Compiles <code>source</code>, the contents of <code>file</code> (a path relative to the project root, used in node IDs and errors), and builds the piece named by <code>options.entry</code>.  <br /></td></tr>
 <tr class="separator:a2c1f631d72f2bf564ad8079b38cfcefe"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6d368617517d018355d115b34149a2aa" id="r_a6d368617517d018355d115b34149a2aa"><td class="memItemLeft" align="right" valign="top"><a id="a6d368617517d018355d115b34149a2aa" name="a6d368617517d018355d115b34149a2aa"></a>
-bool&#160;</td><td class="memItemRight" valign="bottom"><b>interpreter::isLibraryPath</b> (std::string_view path) noexcept</td></tr>
+<a class="el" href="namespaceinterpreter.html#a0d0ea459693216b52a15a178451ed251a6ba8844da718b4a65f60dbfd0d92d6ef">bool</a>&#160;</td><td class="memItemRight" valign="bottom"><b>interpreter::isLibraryPath</b> (std::string_view path) <a class="el" href="namespaceinterpreter.html#a0d0ea459693216b52a15a178451ed251a6ba8844da718b4a65f60dbfd0d92d6ef">noexcept</a></td></tr>
 <tr class="memdesc:a6d368617517d018355d115b34149a2aa"><td class="mdescLeft">&#160;</td><td class="mdescRight">True when <code>path</code>, relative to the project root, names a standard library file (<code>std/...</code>), which is compiled in and not in the project. <br /></td></tr>
 <tr class="separator:a6d368617517d018355d115b34149a2aa"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4694e4acd58f90d08f76e2f25b70af55" id="r_a4694e4acd58f90d08f76e2f25b70af55"><td class="memItemLeft" align="right" valign="top"><a id="a4694e4acd58f90d08f76e2f25b70af55" name="a4694e4acd58f90d08f76e2f25b70af55"></a>
@@ -157,7 +157,7 @@ std::string&#160;</td><td class="memItemRight" valign="bottom"><b>interpreter::l
 <tr class="memdesc:a4694e4acd58f90d08f76e2f25b70af55"><td class="mdescLeft">&#160;</td><td class="mdescRight">The language name of primitive type <code>type:</code> <code>sineOsc</code> is <code>sine-osc</code>. <br /></td></tr>
 <tr class="separator:a4694e4acd58f90d08f76e2f25b70af55"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aec6557b085935bb47c13d2a48b669a63" id="r_aec6557b085935bb47c13d2a48b669a63"><td class="memItemLeft" align="right" valign="top"><a id="aec6557b085935bb47c13d2a48b669a63" name="aec6557b085935bb47c13d2a48b669a63"></a>
-std::span&lt; const <a class="el" href="structinterpreter_1_1library_file.html">libraryFile</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>interpreter::libraryFiles</b> ()</td></tr>
+std::span&lt; <a class="el" href="namespaceinterpreter.html#a0d0ea459693216b52a15a178451ed251a6ba8844da718b4a65f60dbfd0d92d6ef">const</a> <a class="el" href="structinterpreter_1_1library_file.html">libraryFile</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>interpreter::libraryFiles</b> ()</td></tr>
 <tr class="memdesc:aec6557b085935bb47c13d2a48b669a63"><td class="mdescLeft">&#160;</td><td class="mdescRight">The standard library's files, compiled into the interpreter, in path order: for <code>import</code>, and for an editor that reads their definitions. <br /></td></tr>
 <tr class="separator:aec6557b085935bb47c13d2a48b669a63"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1b6c610b8a1cc7061b8f67e2e62b11f4" id="r_a1b6c610b8a1cc7061b8f67e2e62b11f4"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceinterpreter.html#a1b6c610b8a1cc7061b8f67e2e62b11f4">interpreter::builtinNames</a> ()</td></tr>
@@ -166,13 +166,13 @@ std::span&lt; const <a class="el" href="structinterpreter_1_1library_file.html">
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>
 Variables</h2></td></tr>
-<tr class="memitem:add645ed11296aed9459963e1301ff0ba" id="r_add645ed11296aed9459963e1301ff0ba"><td class="memItemLeft" align="right" valign="top">constexpr std::size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceinterpreter.html#add645ed11296aed9459963e1301ff0ba">interpreter::maxEvalDepth</a> = 2000</td></tr>
+<tr class="memitem:add645ed11296aed9459963e1301ff0ba" id="r_add645ed11296aed9459963e1301ff0ba"><td class="memItemLeft" align="right" valign="top"><a class="el" href="namespaceinterpreter.html#a0d0ea459693216b52a15a178451ed251a6ba8844da718b4a65f60dbfd0d92d6ef">constexpr</a> std::size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceinterpreter.html#add645ed11296aed9459963e1301ff0ba">interpreter::maxEvalDepth</a> = 2000</td></tr>
 <tr class="memdesc:add645ed11296aed9459963e1301ff0ba"><td class="mdescLeft">&#160;</td><td class="mdescRight">Most nested evaluations (forms within forms, calls within calls, and mappers of mappers) before a compilation fails with an error.  <br /></td></tr>
 <tr class="separator:add645ed11296aed9459963e1301ff0ba"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>Compiles a source file to a validated graph (<code>interpreter.md</code> §2): read, evaluate, lower mappers, assign node IDs, sort, and validate. </p>
-<p>The supported language is a subset of <code>grammar.md</code>: the special forms <code>define</code>, <code>defpiece</code>, <code>let</code> (bindings are sequential), <code>fn</code>, <code>do</code>, <code>if</code>, <code>cond</code>, <code>set!</code>, <code>quote</code>, <code>module</code>, <code>import</code>, and <code>pipe</code>; the object system (<code>defclass</code>, <code>defgeneric</code>, <code>defmethod</code>, <code>make</code>); the builtins <code>+ - * /</code> with dimensions, <code>= &lt; &gt; &lt;= &gt;=</code>, <code>not</code>, <code>list</code>, <code>map</code>, <code>range</code>, <code>tempo</code>, <code>mapper</code>, <code>slot-value</code>, and the mapper operations; and calls to every primitive in the <code>metadata</code> tables, named in kebab-case. Beat values for time parameters and in mappers are not supported yet. </p>
+<div class="textblock"><p>Compiles a source file to a validated graph (<code><a class="el" href="namespaceinterpreter.html#a0d0ea459693216b52a15a178451ed251a6ba8844da718b4a65f60dbfd0d92d6ef" title="[ ... ], its elements in datum::items">interpreter.md</a></code> §2): read, evaluate, lower mappers, assign node IDs, sort, and validate. </p>
+<p>The supported language is a subset of <code>grammar.md</code>: the special forms <code>define</code>, <code>defpiece</code>, <code>let</code> (bindings are sequential), <code>fn</code>, <code>do</code>, <code>if</code>, <code>cond</code>, <code>set!</code>, <code>quote</code>, <code>module</code>, <code>import</code>, and <code>pipe</code>; the object system (<code>defclass</code>, <code>defgeneric</code>, <code>defmethod</code>, <code>make</code>); the builtins that <code>evaluator::installBuiltins</code> (evaluator.cpp) and <code>evaluator::installPageBuiltins</code> (page.cpp) bind, listed by builtinNames(); and calls to every primitive in the <code>metadata</code> tables, named in kebab-case. A beat value for a time parameter compiles to a <code>beatsToSeconds</code> node; a beat value in a mapper is an error. </p>
 </div></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->

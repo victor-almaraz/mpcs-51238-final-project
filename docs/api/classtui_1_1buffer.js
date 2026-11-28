@@ -1,5 +1,6 @@
 var classtui_1_1buffer =
 [
+    [ "buffer", "classtui_1_1buffer.html#aaecc69efe3a7ecc81d1a07a962ba9eeb", null ],
     [ "buffer", "classtui_1_1buffer.html#ac7daf4029cea5421f1601a6fcdd1fdc8", null ],
     [ "byteSize", "classtui_1_1buffer.html#a069cae2bce3d4aabad389c01a90f96b7", null ],
     [ "canRedo", "classtui_1_1buffer.html#aca30b3e6850a1ae32eb918c1248c5f7b", null ],

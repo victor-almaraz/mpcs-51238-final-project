@@ -13,7 +13,7 @@ var searchData=
   ['bipolar_10',['bipolar',['../classprimitives_1_1rng.html#a529194162ef15ac452c4b5435e250db5',1,'primitives::rng']]],
   ['bit_11',['bit',['../namespacemetadata.html#a0811c5c1095228fc56a401380bdfcf1b',1,'metadata']]],
   ['broadcast_12',['broadcast',['../classprotocol_1_1server_session.html#a37c6677e3666ec0ce8702dc5c579319c',1,'protocol::serverSession::broadcast()'],['../classprotocol_1_1server_link.html#ae3cd364ad5138e93c004014cb3e415cd',1,'protocol::serverLink::broadcast()']]],
-  ['buffer_13',['buffer',['../classtui_1_1buffer.html#ac7daf4029cea5421f1601a6fcdd1fdc8',1,'tui::buffer']]],
+  ['buffer_13',['buffer',['../classtui_1_1buffer.html#aaecc69efe3a7ecc81d1a07a962ba9eeb',1,'tui::buffer::buffer()=default'],['../classtui_1_1buffer.html#ac7daf4029cea5421f1601a6fcdd1fdc8',1,'tui::buffer::buffer(std::string_view text, std::filesystem::path path={}, undoLimits limits={})']]],
   ['bufferbytes_14',['bufferBytes',['../namespaceprimitives.html#a6cebbc083e3933f25d5262898ec1a8de',1,'primitives']]],
   ['buffercount_15',['bufferCount',['../classtui_1_1app.html#a5eee6ae3b8e7823976c32219052282bd',1,'tui::app']]],
   ['bufferid_16',['bufferId',['../classprimitives_1_1save_port.html#a6ca86cf74707baaf97d449b7b968029c',1,'primitives::savePort']]],

@@ -99,7 +99,7 @@ $(function(){initNavTree('classprimitives_1_1io_port_1_1delivery.html',''); init
 </div><!--header-->
 <div class="contents">
 
-<p>A delivery in progress (hub thread), from before it reads whether the port is active until after it pushes.  
+<p>A delivery in progress (I/O thread), from before it reads whether the port is active until after it pushes.  
  <a href="#details">More...</a></p>
 
 <p><code>#include &lt;<a class="el" href="io_8h_source.html">espresso/primitives/io.h</a>&gt;</code></p>
@@ -128,7 +128,7 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>admitted</b> () const
 <tr class="separator:adaef5fdc1f6c7f32f48ff2dbcc582c64"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>A delivery in progress (hub thread), from before it reads whether the port is active until after it pushes. </p>
+<div class="textblock"><p>A delivery in progress (I/O thread), from before it reads whether the port is active until after it pushes. </p>
 <p>The audio thread may deactivate the port in between; <a class="el" href="classprimitives_1_1io_port.html#a75784434f2fa9b483c528a9c7d550c89" title="True when no delivery can push into the port any more: it is inactive and none is in progress.">closed()</a> tells it when no delivery can still push. </p>
 </div><hr/>The documentation for this class was generated from the following file:<ul>
 <li>include/espresso/primitives/<a class="el" href="io_8h_source.html">io.h</a></li>

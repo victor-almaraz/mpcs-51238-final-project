@@ -1,5 +1,6 @@
 var classtui_1_1gap_buffer =
 [
+    [ "gapBuffer", "classtui_1_1gap_buffer.html#aa04a0c52269a1903e2e11bf3b902902f", null ],
     [ "gapBuffer", "classtui_1_1gap_buffer.html#a82c0b050fbc549ac81679f3559408dd5", null ],
     [ "at", "classtui_1_1gap_buffer.html#a630268443d5d72726b4e7fba7a639fed", null ],
     [ "erase", "classtui_1_1gap_buffer.html#aed0e1fa1052378f80ffc0ae52f1c1e75", null ],

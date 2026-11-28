@@ -112,7 +112,7 @@ std::uint64_t&#160;</td><td class="memItemRight" valign="bottom"><b>missedDeadli
 <tr class="separator:abeecaf3c57981f1e1439ad6c1e4168c9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a45a704873c820b2c7fdc321126980982" id="r_a45a704873c820b2c7fdc321126980982"><td class="memItemLeft" align="right" valign="top"><a id="a45a704873c820b2c7fdc321126980982" name="a45a704873c820b2c7fdc321126980982"></a>
 std::uint64_t&#160;</td><td class="memItemRight" valign="bottom"><b>drops</b> = 0</td></tr>
-<tr class="memdesc:a45a704873c820b2c7fdc321126980982"><td class="mdescLeft">&#160;</td><td class="mdescRight">Packets and control values dropped by full queues. <br /></td></tr>
+<tr class="memdesc:a45a704873c820b2c7fdc321126980982"><td class="mdescLeft">&#160;</td><td class="mdescRight">Messages dropped: control values refused by the full control queue (setControl()), and the drops <a class="el" href="classprimitives_1_1io_hub.html#a9f6aee43a772249b743bd30258b8efc4" title="Messages dropped so far (countDrop()).">ioHub::drops()</a> counts. <br /></td></tr>
 <tr class="separator:a45a704873c820b2c7fdc321126980982"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab64824d39960b18f8b674bee80bcafd7" id="r_ab64824d39960b18f8b674bee80bcafd7"><td class="memItemLeft" align="right" valign="top"><a id="ab64824d39960b18f8b674bee80bcafd7" name="ab64824d39960b18f8b674bee80bcafd7"></a>
 std::uint64_t&#160;</td><td class="memItemRight" valign="bottom"><b>overflows</b> = 0</td></tr>
@@ -120,7 +120,7 @@ std::uint64_t&#160;</td><td class="memItemRight" valign="bottom"><b>overflows</b
 <tr class="separator:ab64824d39960b18f8b674bee80bcafd7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aac979a0b213f52987879240d69cdb78d" id="r_aac979a0b213f52987879240d69cdb78d"><td class="memItemLeft" align="right" valign="top"><a id="aac979a0b213f52987879240d69cdb78d" name="aac979a0b213f52987879240d69cdb78d"></a>
 float&#160;</td><td class="memItemRight" valign="bottom"><b>load</b> = 0.0f</td></tr>
-<tr class="memdesc:aac979a0b213f52987879240d69cdb78d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Audio thread load, from 0 to 1, smoothed. <br /></td></tr>
+<tr class="memdesc:aac979a0b213f52987879240d69cdb78d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Audio thread load, smoothed: the share of each callback's period spent processing, above 1 when callbacks overrun their periods. <br /></td></tr>
 <tr class="separator:aac979a0b213f52987879240d69cdb78d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afdbc2d2584ec79788a0569873e8007b6" id="r_afdbc2d2584ec79788a0569873e8007b6"><td class="memItemLeft" align="right" valign="top"><a id="afdbc2d2584ec79788a0569873e8007b6" name="afdbc2d2584ec79788a0569873e8007b6"></a>
 std::int32_t&#160;</td><td class="memItemRight" valign="bottom"><b>activePlan</b> = 0</td></tr>

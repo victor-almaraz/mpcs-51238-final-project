@@ -107,7 +107,7 @@ $(function(){initNavTree('classprimitives_1_1engine.html',''); initResizable(); 
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
 <tr class="memitem:a9f0707d3acd261826a9fcdbd550751ab" id="r_a9f0707d3acd261826a9fcdbd550751ab"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9f0707d3acd261826a9fcdbd550751ab">engine</a> (<a class="el" href="structprimitives_1_1engine_options.html">engineOptions</a> options={})</td></tr>
-<tr class="memdesc:a9f0707d3acd261826a9fcdbd550751ab"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allocates the pipe table and queues.  <br /></td></tr>
+<tr class="memdesc:a9f0707d3acd261826a9fcdbd550751ab"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allocates the pipe table and queues, and starts the workers.  <br /></td></tr>
 <tr class="separator:a9f0707d3acd261826a9fcdbd550751ab"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:acddd5122749b1d0409a048513142f016" id="r_acddd5122749b1d0409a048513142f016"><td class="memItemLeft" align="right" valign="top"><a id="acddd5122749b1d0409a048513142f016" name="acddd5122749b1d0409a048513142f016"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>~engine</b> ()</td></tr>
@@ -143,7 +143,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><b>control</b> (std::in
 <tr class="separator:a14471f562297b61f4f22832cf7d229c7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a97ed41e1de80fc53873de31d6db334cd" id="r_a97ed41e1de80fc53873de31d6db334cd"><td class="memItemLeft" align="right" valign="top"><a id="a97ed41e1de80fc53873de31d6db334cd" name="a97ed41e1de80fc53873de31d6db334cd"></a>
 std::vector&lt; <a class="el" href="structprimitives_1_1notice.html">notice</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>collect</b> ()</td></tr>
-<tr class="memdesc:a97ed41e1de80fc53873de31d6db334cd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Control thread: frees retired plans and the clips banks gave back, and returns what changed since the last call, in order: a plan is activated before it retires, and plans activate in the order they were played. <br /></td></tr>
+<tr class="memdesc:a97ed41e1de80fc53873de31d6db334cd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Control thread: frees retired plans and the clips that the clip banks gave back, and returns what changed since the last call, in order: a plan is activated before it retires, and plans activate in the order they were played. <br /></td></tr>
 <tr class="separator:a97ed41e1de80fc53873de31d6db334cd"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a31a5d2ecdbf438de76b55afb65a97e97" id="r_a31a5d2ecdbf438de76b55afb65a97e97"><td class="memItemLeft" align="right" valign="top"><a id="a31a5d2ecdbf438de76b55afb65a97e97" name="a31a5d2ecdbf438de76b55afb65a97e97"></a>
 <a class="el" href="classprimitives_1_1io_hub.html">ioHub</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>io</b> () noexcept</td></tr>
@@ -203,8 +203,8 @@ int&#160;</td><td class="memItemRight" valign="bottom"><b>meter</b> () const noe
 </table>
 </div><div class="memdoc">
 
-<p>Allocates the pipe table and queues. </p>
-<p>Throws std::invalid_argument when the block size is not positive or the sample rate is not a positive finite number. </p>
+<p>Allocates the pipe table and queues, and starts the workers. </p>
+<p>Throws std::invalid_argument when an option is out of range: the block size, sample rate, thread count, worker spin, or a schedule minimum. </p>
 
 </div>
 </div>

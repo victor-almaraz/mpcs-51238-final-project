@@ -169,11 +169,11 @@ template&lt;typename T &gt; </td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="enum-members" name="enum-members"></a>
 Enumerations</h2></td></tr>
-<tr class="memitem:a1400bcadde0822eb9bf2d9469a3d5014" id="r_a1400bcadde0822eb9bf2d9469a3d5014"><td class="memItemLeft" align="right" valign="top"><a id="a1400bcadde0822eb9bf2d9469a3d5014" name="a1400bcadde0822eb9bf2d9469a3d5014"></a>enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1400bcadde0822eb9bf2d9469a3d5014">editMode</a> : std::uint8_t { <b>insert</b>
+<tr class="memitem:a1400bcadde0822eb9bf2d9469a3d5014" id="r_a1400bcadde0822eb9bf2d9469a3d5014"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1400bcadde0822eb9bf2d9469a3d5014">editMode</a> : std::uint8_t { <b>insert</b>
 , <b>normal</b>
 , <b>visual</b>
  }</td></tr>
-<tr class="memdesc:a1400bcadde0822eb9bf2d9469a3d5014"><td class="mdescLeft">&#160;</td><td class="mdescRight">Editor modes. Only the vim scheme leaves <code>insert</code>. <br /></td></tr>
+<tr class="memdesc:a1400bcadde0822eb9bf2d9469a3d5014"><td class="mdescLeft">&#160;</td><td class="mdescRight">Editor modes.  <a href="#a1400bcadde0822eb9bf2d9469a3d5014">More...</a><br /></td></tr>
 <tr class="separator:a1400bcadde0822eb9bf2d9469a3d5014"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
@@ -215,11 +215,11 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>isMovementCommand</b>
 <tr class="separator:a9f0ed57868d937a6e9308c27e1a60131"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a175780244992b2de4cad61d71cd08f5f" id="r_a175780244992b2de4cad61d71cd08f5f"><td class="memItemLeft" align="right" valign="top"><a id="a175780244992b2de4cad61d71cd08f5f" name="a175780244992b2de4cad61d71cd08f5f"></a>
 std::span&lt; const <a class="el" href="structtui_1_1key_binding.html">keyBinding</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>commonBindings</b> () noexcept</td></tr>
-<tr class="memdesc:a175780244992b2de4cad61d71cd08f5f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Bindings shared by every scheme: arrows, Home, End, Page Up, Page Down, Shift-selection, and Delete (<code>tui.md</code> §8.3). <br /></td></tr>
+<tr class="memdesc:a175780244992b2de4cad61d71cd08f5f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Bindings shared by every scheme, such as the arrow, Home, End, Page, Delete, and function keys, with their Shift-selection forms (<code>tui.md</code> §8.3). <br /></td></tr>
 <tr class="separator:a175780244992b2de4cad61d71cd08f5f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4c9db508f5df4228d70188647fe923aa" id="r_a4c9db508f5df4228d70188647fe923aa"><td class="memItemLeft" align="right" valign="top"><a id="a4c9db508f5df4228d70188647fe923aa" name="a4c9db508f5df4228d70188647fe923aa"></a>
 std::span&lt; const <a class="el" href="structtui_1_1key_binding.html">keyBinding</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>schemeBindings</b> (<a class="el" href="settings_8h.html#a3a376a1f0e8b6260a7eb03834c92fd93">workspace::keyScheme</a> scheme, <a class="el" href="#a1400bcadde0822eb9bf2d9469a3d5014">editMode</a> mode) noexcept</td></tr>
-<tr class="memdesc:a4c9db508f5df4228d70188647fe923aa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Bindings of <code>scheme</code> in <code>mode</code>, excluding <a class="el" href="#a175780244992b2de4cad61d71cd08f5f" title="Bindings shared by every scheme: arrows, Home, End, Page Up, Page Down, Shift-selection,...">commonBindings()</a>. <br /></td></tr>
+<tr class="memdesc:a4c9db508f5df4228d70188647fe923aa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Bindings of <code>scheme</code> in <code>mode</code>, excluding <a class="el" href="#a175780244992b2de4cad61d71cd08f5f" title="Bindings shared by every scheme, such as the arrow, Home, End, Page, Delete, and function keys,...">commonBindings()</a>. <br /></td></tr>
 <tr class="separator:a4c9db508f5df4228d70188647fe923aa"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4e29d19f2856e190d2dcc8605e9e4f0e" id="r_a4e29d19f2856e190d2dcc8605e9e4f0e"><td class="memItemLeft" align="right" valign="top"><a id="a4e29d19f2856e190d2dcc8605e9e4f0e" name="a4e29d19f2856e190d2dcc8605e9e4f0e"></a>
 std::span&lt; const <a class="el" href="structtui_1_1ex_command.html">exCommand</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>exCommands</b> () noexcept</td></tr>
@@ -278,7 +278,33 @@ constexpr std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>tabW
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>The terminal editor: buffers, key schemes, themes, and the screen (the <code>tui</code> module), over the <code>workspace</code> module's files, settings, console, and link to the interpreter and server. </p>
-</div><h2 class="groupheader">Function Documentation</h2>
+</div><h2 class="groupheader">Enumeration Type Documentation</h2>
+<a id="a1400bcadde0822eb9bf2d9469a3d5014" name="a1400bcadde0822eb9bf2d9469a3d5014"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1400bcadde0822eb9bf2d9469a3d5014">&#9670;&#160;</a></span>editMode</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">enum class <a class="el" href="#a1400bcadde0822eb9bf2d9469a3d5014">tui::editMode</a> : std::uint8_t</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">strong</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Editor modes. </p>
+<p>Only the vim scheme leaves <code>insert</code>. In <code>insert</code>, printable keys insert text; <code>normal</code> takes vim commands; <code>visual</code> extends a selection. </p>
+
+</div>
+</div>
+<h2 class="groupheader">Function Documentation</h2>
 <a id="a5aed4237d29767b5a0150015bc4af8f6" name="a5aed4237d29767b5a0150015bc4af8f6"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a5aed4237d29767b5a0150015bc4af8f6">&#9670;&#160;</a></span>keyNameFromInput()</h2>
 

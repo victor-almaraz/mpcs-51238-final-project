@@ -102,7 +102,7 @@ $(function(){initNavTree('page_spec_8h.html',''); initResizable(); });
 </div><!--header-->
 <div class="contents">
 
-<p>The kinds of a page's layout (<code>dsl-ui.md</code> §7.1): groups, which hold other kinds, and controls, each bound to an OSC address on the page port.  
+<p>The kinds of a page's layout (<code>dsl-ui.md</code> §7.1): groups, which hold other kinds; controls and displays, each bound to an OSC address on the page port; and spaces, which have no address.  
 <a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;cstdint&gt;</code><br />
 <code>#include &lt;span&gt;</code><br />
@@ -137,7 +137,7 @@ Enumerations</h2></td></tr>
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
 <tr class="memitem:acdbfbddc352d8cfea72727f458e27fa3" id="r_acdbfbddc352d8cfea72727f458e27fa3"><td class="memItemLeft" align="right" valign="top">std::span&lt; const <a class="el" href="structmetadata_1_1page_kind_spec.html">pageKindSpec</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacemetadata.html#acdbfbddc352d8cfea72727f458e27fa3">metadata::pageKinds</a> () noexcept</td></tr>
-<tr class="memdesc:acdbfbddc352d8cfea72727f458e27fa3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Every kind of layout element: the groups, then the controls, then the displays.  <br /></td></tr>
+<tr class="memdesc:acdbfbddc352d8cfea72727f458e27fa3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Every kind of layout element: the groups, then the controls, then the displays, then the spaces.  <br /></td></tr>
 <tr class="separator:acdbfbddc352d8cfea72727f458e27fa3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6e0b6799e7fd768804bca61820ef8c4e" id="r_a6e0b6799e7fd768804bca61820ef8c4e"><td class="memItemLeft" align="right" valign="top"><a id="a6e0b6799e7fd768804bca61820ef8c4e" name="a6e0b6799e7fd768804bca61820ef8c4e"></a>
 <a class="el" href="namespacemetadata.html#a402b66846299fb91340b5e9519cb70e3">optionalRef</a>&lt; <a class="el" href="structmetadata_1_1page_kind_spec.html">pageKindSpec</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>metadata::findPageKind</b> (std::string_view kind) noexcept</td></tr>
@@ -167,7 +167,7 @@ constexpr std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b
 <tr class="separator:accf1dee886ed5ce42a8c183c2b18799d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>The kinds of a page's layout (<code>dsl-ui.md</code> §7.1): groups, which hold other kinds, and controls, each bound to an OSC address on the page port. </p>
+<div class="textblock"><p>The kinds of a page's layout (<code>dsl-ui.md</code> §7.1): groups, which hold other kinds; controls and displays, each bound to an OSC address on the page port; and spaces, which have no address. </p>
 <p>The table is data: the IR validator checks a layout against it, and the interpreter and the page renderer read it. </p>
 </div></div><!-- contents -->
 </div><!-- doc-content -->

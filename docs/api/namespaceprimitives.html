@@ -244,7 +244,7 @@ Classes</h2></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Keeps RealtimeSanitizer from reporting the calling thread for its scope (<code>__rtsan::ScopedDisabler</code>) in a build with -fsanitize=realtime, and does nothing in any other build.  <a href="classprimitives_1_1realtime_sanitizer_off.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1rng.html">rng</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">SplitMix64: small, fast, and good enough for audio noise and choices.  <a href="classprimitives_1_1rng.html#details">More...</a><br /></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">SplitMix64: a 64-bit generator with one word of state, for audio noise and random choices.  <a href="classprimitives_1_1rng.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1sample_buffer.html">sampleBuffer</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A block of audio memory of a fixed number of channels and frames, planar and zeroed when made (<code>samples.md</code> §2).  <a href="classprimitives_1_1sample_buffer.html#details">More...</a><br /></td></tr>
@@ -440,9 +440,8 @@ int&#160;</td><td class="memItemRight" valign="bottom"><b>data2</b> (const <a cl
 int&#160;</td><td class="memItemRight" valign="bottom"><b>bendValue</b> (const <a class="el" href="structprimitives_1_1event.html">event</a> &amp;e) noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
 <tr class="memdesc:a01db91bc494e8ccaea7a7ff865cc7a5a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Pitch bend value, 0 to 16383. <br /></td></tr>
 <tr class="separator:a01db91bc494e8ccaea7a7ff865cc7a5a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7e2defbc8f1e56c65ba50dcc5b7f18fe" id="r_a7e2defbc8f1e56c65ba50dcc5b7f18fe"><td class="memItemLeft" align="right" valign="top"><a id="a7e2defbc8f1e56c65ba50dcc5b7f18fe" name="a7e2defbc8f1e56c65ba50dcc5b7f18fe"></a>
-float&#160;</td><td class="memItemRight" valign="bottom"><b>number</b> (const <a class="el" href="structprimitives_1_1event.html">event</a> &amp;e) noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
-<tr class="memdesc:a7e2defbc8f1e56c65ba50dcc5b7f18fe"><td class="mdescLeft">&#160;</td><td class="mdescRight">The number carried by a trigger or value event; for MIDI events, the second data byte scaled to 0–1. <br /></td></tr>
+<tr class="memitem:a7e2defbc8f1e56c65ba50dcc5b7f18fe" id="r_a7e2defbc8f1e56c65ba50dcc5b7f18fe"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7e2defbc8f1e56c65ba50dcc5b7f18fe">number</a> (const <a class="el" href="structprimitives_1_1event.html">event</a> &amp;e) noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
+<tr class="memdesc:a7e2defbc8f1e56c65ba50dcc5b7f18fe"><td class="mdescLeft">&#160;</td><td class="mdescRight">The number carried by a trigger or value event.  <br /></td></tr>
 <tr class="separator:a7e2defbc8f1e56c65ba50dcc5b7f18fe"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af126374a9721a1d8596f1dded640f4ce" id="r_af126374a9721a1d8596f1dded640f4ce"><td class="memItemLeft" align="right" valign="top"><a id="af126374a9721a1d8596f1dded640f4ce" name="af126374a9721a1d8596f1dded640f4ce"></a>
 <a class="el" href="structprimitives_1_1pool_ref.html">poolRef</a>&#160;</td><td class="memItemRight" valign="bottom"><b>oscData</b> (const <a class="el" href="structprimitives_1_1event.html">event</a> &amp;e) noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
@@ -458,9 +457,8 @@ float&#160;</td><td class="memItemRight" valign="bottom"><b>number</b> (const <a
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>oscAddressIs</b> (std::span&lt; const std::byte &gt; message, std::string_view address) noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
 <tr class="memdesc:a06acbd23e298bf998956242c4ef95f7c"><td class="mdescLeft">&#160;</td><td class="mdescRight">True when the OSC message's address is <code>address</code>. Real-time safe. <br /></td></tr>
 <tr class="separator:a06acbd23e298bf998956242c4ef95f7c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a85ffad359986e2dc33fedf8450183380" id="r_a85ffad359986e2dc33fedf8450183380"><td class="memItemLeft" align="right" valign="top"><a id="a85ffad359986e2dc33fedf8450183380" name="a85ffad359986e2dc33fedf8450183380"></a>
-std::optional&lt; float &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>oscFirstNumber</b> (std::span&lt; const std::byte &gt; message) noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
-<tr class="memdesc:a85ffad359986e2dc33fedf8450183380"><td class="mdescLeft">&#160;</td><td class="mdescRight">The first numeric argument (<code>i</code>, <code>f</code>, <code>h</code>, or <code>d</code>) of an OSC message. <br /></td></tr>
+<tr class="memitem:a85ffad359986e2dc33fedf8450183380" id="r_a85ffad359986e2dc33fedf8450183380"><td class="memItemLeft" align="right" valign="top">std::optional&lt; float &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a85ffad359986e2dc33fedf8450183380">oscFirstNumber</a> (std::span&lt; const std::byte &gt; message) noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
+<tr class="memdesc:a85ffad359986e2dc33fedf8450183380"><td class="mdescLeft">&#160;</td><td class="mdescRight">The first numeric argument (<code>i</code>, <code>f</code>, <code>h</code>, or <code>d</code>) of an OSC message, past any string (<code>s</code>) and blob (<code>b</code>) arguments before it.  <br /></td></tr>
 <tr class="separator:a85ffad359986e2dc33fedf8450183380"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa5e4f12f36172e89b9c2061544ee8eef" id="r_aa5e4f12f36172e89b9c2061544ee8eef"><td class="memItemLeft" align="right" valign="top">std::optional&lt; std::size_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa5e4f12f36172e89b9c2061544ee8eef">oscNumbers</a> (std::span&lt; const std::byte &gt; message, std::span&lt; float &gt; out) noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
 <tr class="memdesc:aa5e4f12f36172e89b9c2061544ee8eef"><td class="mdescLeft">&#160;</td><td class="mdescRight">The first <code>out.size()</code> arguments of an OSC message, as numbers, into <code>out:</code> how many it read, fewer when the message has fewer.  <br /></td></tr>
@@ -472,7 +470,7 @@ std::optional&lt; float &gt;&#160;</td><td class="memItemRight" valign="bottom">
 <tr class="memdesc:aa50b351d99222955d8b6aff191748b4e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Adds <code>src</code> into <code>dst</code> with a gain that ramps linearly from <code>gainStart</code> to <code>gainEnd</code> across the samples (crossfades, §9.3).  <br /></td></tr>
 <tr class="separator:aa50b351d99222955d8b6aff191748b4e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac4b3bcdc73818733588d251a6510284d" id="r_ac4b3bcdc73818733588d251a6510284d"><td class="memItemLeft" align="right" valign="top">std::shared_ptr&lt; <a class="el" href="classprimitives_1_1plan.html">plan</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac4b3bcdc73818733588d251a6510284d">buildPlan</a> (const <a class="el" href="structmetadata_1_1graph_spec.html">metadata::graphSpec</a> &amp;graph, std::int32_t planId, <a class="el" href="structprimitives_1_1build_env.html">buildEnv</a> env)</td></tr>
-<tr class="memdesc:ac4b3bcdc73818733588d251a6510284d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Builds and prepares a plan from <code>graph</code>, which must have passed <code><a class="el" href="namespaceir.html#a3325eae806eff5fba5f5164d33c4f8b5" title="Semantic checks (interpreter.md §12.3): known types and parameters, value kinds and ranges,...">ir::validate</a></code>.  <br /></td></tr>
+<tr class="memdesc:ac4b3bcdc73818733588d251a6510284d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Builds and prepares a plan from <code>graph</code>, which must have passed <code><a class="el" href="namespaceir.html#a3325eae806eff5fba5f5164d33c4f8b5" title="Semantic checks (interpreter.md §12.3) of the graph&#39;s declarations, its nodes against the primitive t...">ir::validate</a></code>.  <br /></td></tr>
 <tr class="separator:ac4b3bcdc73818733588d251a6510284d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a440c9e6a33bea42e24b02e9b731093a6" id="r_a440c9e6a33bea42e24b02e9b731093a6"><td class="memItemLeft" align="right" valign="top"><a id="a440c9e6a33bea42e24b02e9b731093a6" name="a440c9e6a33bea42e24b02e9b731093a6"></a>
 std::vector&lt; std::string_view &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>registeredTypes</b> ()</td></tr>
@@ -523,7 +521,7 @@ constexpr std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>oscQ
 <tr class="separator:a909609d5aaebaf78dfe4451a1db57532"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2d894fa2eca8b85d9d125df6ed992d90" id="r_a2d894fa2eca8b85d9d125df6ed992d90"><td class="memItemLeft" align="right" valign="top"><a id="a2d894fa2eca8b85d9d125df6ed992d90" name="a2d894fa2eca8b85d9d125df6ed992d90"></a>
 constexpr double&#160;</td><td class="memItemRight" valign="bottom"><b>defaultMinimumTaskCost</b> = 20'000.0</td></tr>
-<tr class="memdesc:a2d894fa2eca8b85d9d125df6ed992d90"><td class="mdescLeft">&#160;</td><td class="mdescRight">The least estimated cost of a task by default, in nanoseconds a block (<code>threads.md</code> §5.2, proposed): a task's bookkeeping, about a microsecond, then stays a few percent of its work. <br /></td></tr>
+<tr class="memdesc:a2d894fa2eca8b85d9d125df6ed992d90"><td class="mdescLeft">&#160;</td><td class="mdescRight">The least estimated cost of a task by default, in nanoseconds a block (<code>threads.md</code> §5.2): a task's bookkeeping, about a microsecond, then stays a few percent of its work. <br /></td></tr>
 <tr class="separator:a2d894fa2eca8b85d9d125df6ed992d90"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a683927d67f779ba24c6b02563e9104bb" id="r_a683927d67f779ba24c6b02563e9104bb"><td class="memItemLeft" align="right" valign="top">constexpr double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a683927d67f779ba24c6b02563e9104bb">defaultMinimumParallelSaving</a> = 4'000.0</td></tr>
 <tr class="memdesc:a683927d67f779ba24c6b02563e9104bb"><td class="mdescLeft">&#160;</td><td class="mdescRight">The least estimated saving for which a schedule runs in parallel by default, in nanoseconds a block (<code><a class="el" href="structprimitives_1_1schedule_options.html#a17fd05d9624f2bc4a98e4d2e7ef47f11" title="The least estimated saving a block, in nanoseconds, not negative, for which tasks that can run at onc...">scheduleOptions::minimumParallelSaving</a></code>, <code>threads.md</code> §6.1.1).  <br /></td></tr>
@@ -868,7 +866,7 @@ constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>maxDeviceCha
       </table>
 </div><div class="memdoc">
 
-<p>Builds and prepares a plan from <code>graph</code>, which must have passed <code><a class="el" href="namespaceir.html#a3325eae806eff5fba5f5164d33c4f8b5" title="Semantic checks (interpreter.md §12.3): known types and parameters, value kinds and ranges,...">ir::validate</a></code>. </p>
+<p>Builds and prepares a plan from <code>graph</code>, which must have passed <code><a class="el" href="namespaceir.html#a3325eae806eff5fba5f5164d33c4f8b5" title="Semantic checks (interpreter.md §12.3) of the graph&#39;s declarations, its nodes against the primitive t...">ir::validate</a></code>. </p>
 <p>Throws <a class="el" href="classprimitives_1_1build_error.html" title="A node that cannot be built. Thrown on the builder thread only.">buildError</a> for nodes the engine cannot run, such as an unregistered type or an index beyond the pipe table, and for buffers it cannot make: a file that does not load, or more buffer memory than the pool allows (<code>samples.md</code> §4.6, §5.6). </p>
 
 </div>
@@ -967,6 +965,62 @@ constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>maxDeviceCha
 
 <p>Converts raw MIDI bytes (status and data) to an event. </p>
 <p>Running status and system messages are not supported. A note-on with velocity 0 is a note-off. </p>
+
+</div>
+</div>
+<a id="a7e2defbc8f1e56c65ba50dcc5b7f18fe" name="a7e2defbc8f1e56c65ba50dcc5b7f18fe"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7e2defbc8f1e56c65ba50dcc5b7f18fe">&#9670;&#160;</a></span>number()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">float primitives::number </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="structprimitives_1_1event.html">event</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>e</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>The number carried by a trigger or value event. </p>
+<p>For MIDI events, a value scaled to 0–1: a pitch bend's 14-bit value, a program change's or channel pressure's first data byte, and the other types' second data byte. 0 for other events. </p>
+
+</div>
+</div>
+<a id="a85ffad359986e2dc33fedf8450183380" name="a85ffad359986e2dc33fedf8450183380"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a85ffad359986e2dc33fedf8450183380">&#9670;&#160;</a></span>oscFirstNumber()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::optional&lt; float &gt; primitives::oscFirstNumber </td>
+          <td>(</td>
+          <td class="paramtype">std::span&lt; const std::byte &gt;</td>          <td class="paramname"><span class="paramname"><em>message</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>The first numeric argument (<code>i</code>, <code>f</code>, <code>h</code>, or <code>d</code>) of an OSC message, past any string (<code>s</code>) and blob (<code>b</code>) arguments before it. </p>
+<p>Nothing when an argument of another type comes first, when the message has no numeric argument, or when it is malformed. </p>
 
 </div>
 </div>
@@ -1130,7 +1184,7 @@ constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>maxDeviceCha
 </div><div class="memdoc">
 
 <p>The least estimated saving for which a schedule runs in parallel by default, in nanoseconds a block (<code><a class="el" href="structprimitives_1_1schedule_options.html#a17fd05d9624f2bc4a98e4d2e7ef47f11" title="The least estimated saving a block, in nanoseconds, not negative, for which tasks that can run at onc...">scheduleOptions::minimumParallelSaving</a></code>, <code>threads.md</code> §6.1.1). </p>
-<p>Calibrated on Release renders of every example on the development Mac at 2 threads: each example that renders slower in parallel is estimated to save nothing, and the one estimated to save least while rendering faster saves 7.5 µs. </p>
+<p>In Release renders of every example at 2 threads on the reference machine (Intel Core i5-7360U), each example that renders slower in parallel is estimated to save nothing, and the one estimated to save least while rendering faster saves 7.5 µs. </p>
 
 </div>
 </div>

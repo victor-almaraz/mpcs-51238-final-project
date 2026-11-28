@@ -199,13 +199,12 @@ std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bott
 std::uint64_t&#160;</td><td class="memItemRight" valign="bottom"><b>faults</b> () const noexcept</td></tr>
 <tr class="memdesc:a3fd4ddf05add56d16246cbd8c6cea149"><td class="mdescLeft">&#160;</td><td class="mdescRight">Faults reported so far. <br /></td></tr>
 <tr class="separator:a3fd4ddf05add56d16246cbd8c6cea149"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2f17e4c2d17244c5fb985d62ff1a2f10" id="r_a2f17e4c2d17244c5fb985d62ff1a2f10"><td class="memItemLeft" align="right" valign="top"><a id="a2f17e4c2d17244c5fb985d62ff1a2f10" name="a2f17e4c2d17244c5fb985d62ff1a2f10"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>countDrop</b> () noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
-<tr class="memdesc:a2f17e4c2d17244c5fb985d62ff1a2f10"><td class="mdescLeft">&#160;</td><td class="mdescRight">Counts a dropped packet (full queue). Real-time safe. <br /></td></tr>
+<tr class="memitem:a2f17e4c2d17244c5fb985d62ff1a2f10" id="r_a2f17e4c2d17244c5fb985d62ff1a2f10"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2f17e4c2d17244c5fb985d62ff1a2f10">countDrop</a> () noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
+<tr class="memdesc:a2f17e4c2d17244c5fb985d62ff1a2f10"><td class="mdescLeft">&#160;</td><td class="mdescRight">Counts a dropped message: one a full queue refused, one a node discards as malformed, not finite, or too large, a port a node cannot carry across a swap, or a save trigger while a save is pending.  <br /></td></tr>
 <tr class="separator:a2f17e4c2d17244c5fb985d62ff1a2f10"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9f6aee43a772249b743bd30258b8efc4" id="r_a9f6aee43a772249b743bd30258b8efc4"><td class="memItemLeft" align="right" valign="top"><a id="a9f6aee43a772249b743bd30258b8efc4" name="a9f6aee43a772249b743bd30258b8efc4"></a>
 std::uint64_t&#160;</td><td class="memItemRight" valign="bottom"><b>drops</b> () const noexcept</td></tr>
-<tr class="memdesc:a9f6aee43a772249b743bd30258b8efc4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Packets dropped by full queues. <br /></td></tr>
+<tr class="memdesc:a9f6aee43a772249b743bd30258b8efc4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Messages dropped so far (<a class="el" href="#a2f17e4c2d17244c5fb985d62ff1a2f10" title="Counts a dropped message: one a full queue refused, one a node discards as malformed,...">countDrop()</a>). <br /></td></tr>
 <tr class="separator:a9f6aee43a772249b743bd30258b8efc4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
@@ -219,6 +218,34 @@ static bool&#160;</td><td class="memItemRight" valign="bottom"><b>matches</b> (s
 <div class="textblock"><p>Registry of ports. </p>
 <p>Opening ports happens on the builder thread; delivery and draining happen on I/O threads. They lock the hub to find ports, never while calling back; the thread that runs a node never locks it. </p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
+<a id="a2f17e4c2d17244c5fb985d62ff1a2f10" name="a2f17e4c2d17244c5fb985d62ff1a2f10"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2f17e4c2d17244c5fb985d62ff1a2f10">&#9670;&#160;</a></span>countDrop()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void primitives::ioHub::countDrop </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Counts a dropped message: one a full queue refused, one a node discards as malformed, not finite, or too large, a port a node cannot carry across a swap, or a save trigger while a save is pending. </p>
+<p>Real-time safe. </p>
+
+</div>
+</div>
 <a id="a56ffe462b80ac612307c240c58ae8569" name="a56ffe462b80ac612307c240c58ae8569"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a56ffe462b80ac612307c240c58ae8569">&#9670;&#160;</a></span>deliverMidi()</h2>
 

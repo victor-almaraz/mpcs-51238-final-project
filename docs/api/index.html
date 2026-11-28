@@ -95,23 +95,25 @@ $(function(){initNavTree('index.html',''); initResizable(); });
   <div class="headertitle"><div class="title">API reference </div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="mainpage"></a> The API reference documents the public C++ headers in <code>include/espresso/</code>, one namespace per module, named after it. The HTML reference is generated into <code>docs/api/</code> by the <code>docs</code> build target; <code>docs/api/index.html</code> is its entry page.</p>
+<div class="textblock"><p><a class="anchor" id="mainpage"></a> The API reference documents the public C++ headers in <code>include/espresso/</code>. Each module's declarations are in a namespace named after the module. <code><a class="el" href="classespresso_1_1jthread.html" title="A thread that requests a stop and joins on destruction.">espresso::jthread</a></code>, the self-joining thread type of every thread in the project, is in namespace <code>espresso</code>, declared in <code><a class="el" href="jthread_8h.html" title="espresso::jthread: a thread that asks itself to stop and joins when it is destroyed,...">include/espresso/protocol/jthread.h</a></code>. The HTML reference is generated into <code>docs/api/</code> by the <code>docs</code> build target; <code>docs/api/index.html</code> is its entry page.</p>
 <table class="markdownTable">
 <tr class="markdownTableHead">
 <th class="markdownTableHeadNone">Namespace   </th><th class="markdownTableHeadNone">Contents    </th></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone"><code>metadata</code>   </td><td class="markdownTableBodyNone">Primitive parameter tables, graph description types, and the metadata version shared by client and server    </td></tr>
+<td class="markdownTableBodyNone"><code>metadata</code>   </td><td class="markdownTableBodyNone">Primitive parameter tables, page layout kinds, graph description types, and the metadata version shared by client and server    </td></tr>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone"><code>ir</code>   </td><td class="markdownTableBodyNone">IR JSON reading and writing, schema and semantic validation, data-flow sorting, and hazard analysis    </td></tr>
 <tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone"><code>page</code>   </td><td class="markdownTableBodyNone">A page's layout drawn as the HTML the server serves when a project has no <code>ui/index.html</code>, and that the client's <code>--page</code> writes    </td></tr>
+<tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone"><code>protocol</code>   </td><td class="markdownTableBodyNone">OSC encoding and decoding, the client-server message set, IR chunking, and retries    </td></tr>
-<tr class="markdownTableRowEven">
+<tr class="markdownTableRowOdd">
 <td class="markdownTableBodyNone"><code>primitives</code>   </td><td class="markdownTableBodyNone">Sources, sinks, generators, pipes, the pipe table, frames, plans, and the engine    </td></tr>
-<tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone"><code>interpreter</code>   </td><td class="markdownTableBodyNone">The lexer, reader, and compiler of the Lisp dialect    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone"><code>workspace</code>   </td><td class="markdownTableBodyNone">The editor's core without a screen: files, settings, highlighting, the console's log, and the link to the interpreter and server    </td></tr>
+<td class="markdownTableBodyNone"><code>interpreter</code>   </td><td class="markdownTableBodyNone">The Lisp dialect's lexer and reader, the compiler from a source file to a validated graph, the project file (<code>project.lisp</code>) and the entry file a project plays, and the conversion of unit literals to canonical units    </td></tr>
 <tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone"><code>workspace</code>   </td><td class="markdownTableBodyNone">The editor's core without a screen: files, settings, highlighting, the console's log, and the link to the interpreter and server    </td></tr>
+<tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone"><code>tui</code>   </td><td class="markdownTableBodyNone">The terminal editor: buffers, key schemes, themes, and the screen   </td></tr>
 </table>
 <p>The language is described in <code>docs/language.md</code>, its standard library in <code>docs/library.md</code>, and the IR format in <code>docs/ir.md</code>.</p>

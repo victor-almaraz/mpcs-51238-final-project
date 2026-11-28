@@ -119,7 +119,7 @@ Static Public Member Functions</h2></td></tr>
 <tr class="memdesc:a2ef79dfef32007b83c469c528c488c51"><td class="mdescLeft">&#160;</td><td class="mdescRight">Renames <code>from</code> to <code>to</code>, a file or a directory, creating the directories above <code>to</code> that are missing.  <br /></td></tr>
 <tr class="separator:a2ef79dfef32007b83c469c528c488c51"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad6229fa1a6c42827f5cce862471e886a" id="r_ad6229fa1a6c42827f5cce862471e886a"><td class="memItemLeft" align="right" valign="top">static std::optional&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad6229fa1a6c42827f5cce862471e886a">modified</a> (const std::filesystem::path &amp;path)</td></tr>
-<tr class="memdesc:ad6229fa1a6c42827f5cce862471e886a"><td class="mdescLeft">&#160;</td><td class="mdescRight">When <code>path</code> was last written, as an opaque token that changes when the file does (its modification time, in the file clock's ticks); nothing when it cannot be read.  <br /></td></tr>
+<tr class="memdesc:ad6229fa1a6c42827f5cce862471e886a"><td class="mdescLeft">&#160;</td><td class="mdescRight">When <code>path</code> was last written, as an opaque token that changes when the file does (its modification time, in nanoseconds since the file clock's epoch); nothing when it cannot be read.  <br /></td></tr>
 <tr class="separator:ad6229fa1a6c42827f5cce862471e886a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:acadb99524ab880c41750d54d0087d255" id="r_acadb99524ab880c41750d54d0087d255"><td class="memItemLeft" align="right" valign="top">static std::vector&lt; std::filesystem::path &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#acadb99524ab880c41750d54d0087d255">listProject</a> (const std::filesystem::path &amp;root, std::size_t limit=std::numeric_limits&lt; std::size_t &gt;::max())</td></tr>
 <tr class="memdesc:acadb99524ab880c41750d54d0087d255"><td class="mdescLeft">&#160;</td><td class="mdescRight">Lists regular files under <code>root</code>, sorted, relative to it.  <br /></td></tr>
@@ -184,7 +184,7 @@ Static Public Member Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Lists regular files under <code>root</code>, sorted, relative to it. </p>
-<p>Hidden entries (names starting with <code>.</code>) and <code>build</code> directories are skipped. Symbolic links are listed by their own names, and linked directories are descended into, except a link to a directory that contains it, which would repeat forever. At most <code>limit</code> files are listed: the walk stops at the next one, so a caller that gets <code>limit</code> + 1 knows the folder holds more. </p>
+<p>Hidden entries (names starting with <code>.</code>) and <code>build</code> directories are skipped. Symbolic links are listed by their own names, and linked directories are descended into, except a link to a directory that contains it, which would repeat forever. At most <code>limit</code> + 1 files are listed: the walk stops after the file past the limit, so a caller that gets <code>limit</code> + 1 knows the folder holds more. </p>
 
 </div>
 </div>
@@ -211,7 +211,7 @@ Static Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>When <code>path</code> was last written, as an opaque token that changes when the file does (its modification time, in the file clock's ticks); nothing when it cannot be read. </p>
+<p>When <code>path</code> was last written, as an opaque token that changes when the file does (its modification time, in nanoseconds since the file clock's epoch); nothing when it cannot be read. </p>
 <p>An editor keeps the token it read and writes only while the file still has it (<code>patterns.md</code> §13). </p>
 
 </div>

@@ -108,8 +108,12 @@ $(function(){initNavTree('classworkspace_1_1interpreter_link.html',''); initResi
 Public Member Functions</h2></td></tr>
 <tr class="memitem:a2ffb47a2a65090b0a28ee69b8ce79ba6" id="r_a2ffb47a2a65090b0a28ee69b8ce79ba6"><td class="memItemLeft" align="right" valign="top"><a id="a2ffb47a2a65090b0a28ee69b8ce79ba6" name="a2ffb47a2a65090b0a28ee69b8ce79ba6"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>interpreterLink</b> (<a class="el" href="structworkspace_1_1link_options.html">linkOptions</a> options={}, std::function&lt; void()&gt; wake={})</td></tr>
-<tr class="memdesc:a2ffb47a2a65090b0a28ee69b8ce79ba6"><td class="mdescLeft">&#160;</td><td class="mdescRight"><code>wake</code> is called from a worker thread after a reply is queued, so the editor can collect it on its own thread. <br /></td></tr>
+<tr class="memdesc:a2ffb47a2a65090b0a28ee69b8ce79ba6"><td class="mdescLeft">&#160;</td><td class="mdescRight"><code>wake</code> is called from the link's worker thread or the server client's receiver thread after a reply is queued, so the editor can collect it on its own thread. <br /></td></tr>
 <tr class="separator:a2ffb47a2a65090b0a28ee69b8ce79ba6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a12f0494636b8c427201954c2b7479d80" id="r_a12f0494636b8c427201954c2b7479d80"><td class="memItemLeft" align="right" valign="top"><a id="a12f0494636b8c427201954c2b7479d80" name="a12f0494636b8c427201954c2b7479d80"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>~interpreterLink</b> ()</td></tr>
+<tr class="memdesc:a12f0494636b8c427201954c2b7479d80"><td class="mdescLeft">&#160;</td><td class="mdescRight">Stops the worker thread and joins it, then closes the connection. <br /></td></tr>
+<tr class="separator:a12f0494636b8c427201954c2b7479d80"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:abb565f609c588c3e2741c84017c25c5c" id="r_abb565f609c588c3e2741c84017c25c5c"><td class="memItemLeft" align="right" valign="top"><a id="abb565f609c588c3e2741c84017c25c5c" name="abb565f609c588c3e2741c84017c25c5c"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>interpreterLink</b> (const <a class="el" href="classworkspace_1_1interpreter_link.html">interpreterLink</a> &amp;)=delete</td></tr>
 <tr class="separator:abb565f609c588c3e2741c84017c25c5c"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -130,7 +134,7 @@ std::vector&lt; <a class="el" href="structworkspace_1_1run_reply.html">runReply<
 <tr class="separator:aa1b127a729138dfcc51a06ae0ee0fa71"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a03f69f6967207612678f52e378048c3d" id="r_a03f69f6967207612678f52e378048c3d"><td class="memItemLeft" align="right" valign="top"><a id="a03f69f6967207612678f52e378048c3d" name="a03f69f6967207612678f52e378048c3d"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>waitIdle</b> ()</td></tr>
-<tr class="memdesc:a03f69f6967207612678f52e378048c3d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Blocks until every submitted request has a reply. For tests. <br /></td></tr>
+<tr class="memdesc:a03f69f6967207612678f52e378048c3d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Blocks until every submitted request has a reply. <br /></td></tr>
 <tr class="separator:a03f69f6967207612678f52e378048c3d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>

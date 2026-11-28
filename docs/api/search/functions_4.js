@@ -7,7 +7,7 @@ var searchData=
   ['encode_4',['encode',['../namespaceprotocol.html#a8cba73e3f64737127f58b355f84c5193',1,'protocol']]],
   ['encodeoscfloat_5',['encodeOscFloat',['../namespaceprimitives.html#a5ecb16521d34621e89d44040c88b3da1',1,'primitives']]],
   ['endblock_6',['endBlock',['../classprimitives_1_1a_pipe.html#a636e5941030ad5bfc889fde914fcb8c0',1,'primitives::aPipe::endBlock()'],['../classprimitives_1_1c_pipe.html#a664be3b009064b2a60564ffdc9c25af1',1,'primitives::cPipe::endBlock()'],['../classprimitives_1_1pipe_table.html#ac02c82881d07ad377f8e7d492850225f',1,'primitives::pipeTable::endBlock()']]],
-  ['engine_7',['engine',['../classprimitives_1_1engine.html#a9f0707d3acd261826a9fcdbd550751ab',1,'primitives::engine']]],
+  ['engine_7',['engine',['../classprimitives_1_1engine.html#a9f0707d3acd261826a9fcdbd550751ab',1,'primitives::engine::engine()'],['../classprotocol_1_1engine.html#ad865a64163527f0a2768253d315be153',1,'protocol::engine::engine()']]],
   ['ensurecursorvisible_8',['ensureCursorVisible',['../namespacetui.html#a57514ce4debefe948a648351f869e0f7',1,'tui']]],
   ['entries_9',['entries',['../classworkspace_1_1console_log.html#af222239dd4dfc481139f3e0746c5b712',1,'workspace::consoleLog']]],
   ['entryfile_10',['entryFile',['../namespaceinterpreter.html#a863b793436a29a6795f168c4f7bc8320',1,'interpreter']]],

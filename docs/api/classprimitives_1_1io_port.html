@@ -122,7 +122,7 @@ Inheritance diagram for primitives::ioPort:</div>
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
 Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1io_port_1_1delivery.html">delivery</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A delivery in progress (hub thread), from before it reads whether the port is active until after it pushes.  <a href="classprimitives_1_1io_port_1_1delivery.html#details">More...</a><br /></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A delivery in progress (I/O thread), from before it reads whether the port is active until after it pushes.  <a href="classprimitives_1_1io_port_1_1delivery.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
@@ -145,9 +145,8 @@ virtual&#160;</td><td class="memItemRight" valign="bottom"><b>~ioPort</b> ()</td
 const std::string &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>owner</b> () const noexcept</td></tr>
 <tr class="memdesc:a6f9e20f4f445fc516ef5c91468eddc8e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Node ID of the node reading an input port or writing an output port; empty for MIDI and OSC outputs. <br /></td></tr>
 <tr class="separator:a6f9e20f4f445fc516ef5c91468eddc8e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a82d91de62ffeaf7f0a2462a3c5648f8f" id="r_a82d91de62ffeaf7f0a2462a3c5648f8f"><td class="memItemLeft" align="right" valign="top"><a id="a82d91de62ffeaf7f0a2462a3c5648f8f" name="a82d91de62ffeaf7f0a2462a3c5648f8f"></a>
-const std::string &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>device</b> () const noexcept</td></tr>
-<tr class="memdesc:a82d91de62ffeaf7f0a2462a3c5648f8f"><td class="mdescLeft">&#160;</td><td class="mdescRight">MIDI device name pattern; empty matches every device. <br /></td></tr>
+<tr class="memitem:a82d91de62ffeaf7f0a2462a3c5648f8f" id="r_a82d91de62ffeaf7f0a2462a3c5648f8f"><td class="memItemLeft" align="right" valign="top">const std::string &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a82d91de62ffeaf7f0a2462a3c5648f8f">device</a> () const noexcept</td></tr>
+<tr class="memdesc:a82d91de62ffeaf7f0a2462a3c5648f8f"><td class="mdescLeft">&#160;</td><td class="mdescRight">The device pattern: for a MIDI port, a name pattern for matches(), which an empty one passes for every device; for a serial port, the pattern the serial bridge resolves (<a class="el" href="classprimitives_1_1serial_port.html" title="A port carrying frames from or to a serial device (io.md §4).">serialPort</a>).  <br /></td></tr>
 <tr class="separator:a82d91de62ffeaf7f0a2462a3c5648f8f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9c6b38cf1ca2bd103eb1fc58423b5ce6" id="r_a9c6b38cf1ca2bd103eb1fc58423b5ce6"><td class="memItemLeft" align="right" valign="top"><a id="a9c6b38cf1ca2bd103eb1fc58423b5ce6" name="a9c6b38cf1ca2bd103eb1fc58423b5ce6"></a>
 std::uint16_t&#160;</td><td class="memItemRight" valign="bottom"><b>udpPort</b> () const noexcept</td></tr>
@@ -201,6 +200,34 @@ Protected Member Functions</h2></td></tr>
 
 <p>True when no delivery can push into the port any more: it is inactive and none is in progress. </p>
 <p>A delivery that starts later reads the port inactive and pushes nothing (sequentially consistent order). </p>
+
+</div>
+</div>
+<a id="a82d91de62ffeaf7f0a2462a3c5648f8f" name="a82d91de62ffeaf7f0a2462a3c5648f8f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a82d91de62ffeaf7f0a2462a3c5648f8f">&#9670;&#160;</a></span>device()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const std::string &amp; primitives::ioPort::device </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>The device pattern: for a MIDI port, a name pattern for matches(), which an empty one passes for every device; for a serial port, the pattern the serial bridge resolves (<a class="el" href="classprimitives_1_1serial_port.html" title="A port carrying frames from or to a serial device (io.md §4).">serialPort</a>). </p>
+<p>Empty otherwise. </p>
 
 </div>
 </div>

@@ -1,6 +1,7 @@
 var classtui_1_1app =
 [
     [ "app", "classtui_1_1app.html#a9088ca2e7c271fb21a139a08623ffdc5", null ],
+    [ "~app", "classtui_1_1app.html#a790266eba3399fcef471a60edebd721b", null ],
     [ "bufferCount", "classtui_1_1app.html#a5eee6ae3b8e7823976c32219052282bd", null ],
     [ "collectReplies", "classtui_1_1app.html#abe7855f830e0fe5b8d77e14efcc8bad7", null ],
     [ "console", "classtui_1_1app.html#a826d6d83dc20d469f5d63598879a7016", null ],

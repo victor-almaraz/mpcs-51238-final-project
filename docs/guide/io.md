@@ -10,7 +10,7 @@ On Linux the server opens its audio device through JACK: PipeWire's JACK interfa
 
 On macOS the server uses Core Audio. Audio input needs microphone permission for the terminal application (System Settings › Privacy & Security › Microphone); without it, the server runs with no inputs.
 
-`audio-in` reads a device input channel and `audio-out` writes an output channel, both counted from 0. Every `audio-out` limits its signal to its `:ceiling`, full scale by default, and mutes itself if it receives infinite or NaN samples, reporting the node in the editor's console.
+`audio-in` reads device inputs into its pipe and `audio-out` writes its pipe to device outputs, one device channel for each channel of the pipe, from `:channel`, counted from 0: a stereo pipe on `:channel 0` plays on outputs 0 and 1. Every `audio-out` limits its signal to its `:ceiling`, full scale by default, and mutes itself if it receives infinite or NaN samples, reporting the node in the editor's console.
 
 ## MIDI
 

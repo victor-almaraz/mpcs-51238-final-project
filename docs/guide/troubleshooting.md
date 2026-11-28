@@ -34,7 +34,7 @@ server: not reachable at 127.0.0.1:57190; the editor connects when espresso-serv
 
 - **No device opens.** `espresso-server: cannot open an audio device: …` and the server exits. `espresso-server --list-devices` lists the devices; `--device NAME` chooses one, and `--no-audio` runs without one.
 - **An output muted itself.** An `audio-out` that receives infinite or NaN samples mutes itself until the next swap, and the console reports the node: `non-finite audio samples; this output is muted until the next swap`. Correct the piece, a division by a signal that reaches 0 or a feedback loop that grows for instance, and play it again.
-- **No channel is written.** A piece sounds only through its `audio-out` nodes, each on one device channel, from 0. The status bar's plan shows whether a plan plays.
+- **No channel is written.** A piece sounds only through its `audio-out` nodes, each on the device outputs from its `:channel`, counted from 0. The status bar's plan shows whether a plan plays.
 - **No input on macOS.** Without microphone permission for the terminal application, the server runs with no inputs (System Settings › Privacy & Security › Microphone).
 
 ## Clicks, dropouts, and missed deadlines

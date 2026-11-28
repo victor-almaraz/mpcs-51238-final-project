@@ -17,6 +17,16 @@ guide/troubleshooting
 ```
 
 ```{toctree}
+:caption: Tutorials
+:maxdepth: 1
+
+tutorials/instrument
+tutorials/web-data
+tutorials/samples
+tutorials/clips
+```
+
+```{toctree}
 :caption: Reference
 :maxdepth: 2
 

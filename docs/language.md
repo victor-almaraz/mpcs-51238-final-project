@@ -141,6 +141,8 @@ An index or a count, such as the `i` of `nth`, the `n` of `range`, and the `:cha
 (pipe :audio :feedback #t)   ; delays its data by one block
 ```
 
+Several nodes may write one pipe. An audio pipe sums its writers; a control pipe holds the value its last writer in execution order wrote; an event pipe merges its writers' events in time order. A control pipe holds 0 until a node writes it.
+
 Every primitive is called by its name in kebab-case (`sine-osc`, `delay-line`, `scale-exp`) with keyword arguments: its parameters and its ports. A parameter takes a constant or a pipe; a port takes a pipe or a vector of pipes.
 
 ```lisp

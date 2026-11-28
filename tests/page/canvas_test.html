@@ -44,9 +44,10 @@
       const at = (type, target, x, y, button = 0) =>
         target.dispatchEvent(new PointerEvent(type, { pointerId: 1, isPrimary: true, button, clientX: x, clientY: y, bubbles: true, composed: true }));
       at("pointerdown", page, box.right - 200, box.bottom - 200);
+      at("pointermove", page, box.right - 180, box.bottom - 180);
       at("pointermove", page, box.right - 150, box.bottom - 160);
       at("pointerup", page, box.right - 150, box.bottom - 160);
-      expect("a drag on the background pans", view().x === v.x + 50 && view().y === v.y + 40);
+      expect("a drag on the background pans by its whole path", view().x === v.x + 50 && view().y === v.y + 40);
       v = view();
       const control = document.getElementById("knob").shadowRoot.querySelector(".control");
       control.dispatchEvent(new PointerEvent("pointerdown", { pointerId: 2, button: 0, clientX: 10, clientY: 10, bubbles: true, composed: true }));
@@ -130,6 +131,8 @@
       // The view is kept for the next load.
       const kept = JSON.parse(localStorage.getItem(canvas.key));
       expect("the view is kept", kept && kept.zoom === 0.25);
+      expect("under the page's host, path, and project",
+        canvas.key === `espresso-canvas:${location.host}${location.pathname}:espresso-ui.js canvas test:`);
       result.textContent = failures.length ? "canvas: FAIL\n" + failures.join("\n") : "canvas: ok";
     } catch (error) {
       result.textContent = "canvas: FAIL\n" + error;

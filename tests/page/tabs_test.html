@@ -59,7 +59,8 @@
       expect("End opens the last tab", !master.hidden);
       // The open tab is kept for the next load.
       expect("the open tab is kept by its label", localStorage.getItem(tabs.key) === "Master");
-      expect("for this set of tabs", tabs.key.endsWith("Bass\u001fMaster"));
+      expect("for this set of tabs",
+        tabs.key === `espresso-tab:${location.host}${location.pathname}:espresso-ui.js tabs test:Bass\u001fMaster`);
       // The next load of the same tabs opens the one kept.
       const again = document.createElement("es-tabs");
       again.innerHTML = '<es-tab label="Bass"></es-tab><es-tab label="Master"></es-tab>';

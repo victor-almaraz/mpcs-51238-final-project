@@ -88,117 +88,84 @@ if(ESPRESSO_OSASCRIPT)
 endif()
 
 # The page controls in a browser (ui.md §7.2), where Chrome is installed:
-# tests/page/controls_test.html drives each control and writes its result
-# into the page, which --dump-dom prints. A profile of its own keeps the
-# test apart from a Chrome the user has open.
+# each test page drives what it tests and writes its verdict into the page,
+# which --dump-dom prints. A profile of its own keeps the tests apart from a
+# Chrome the user has open.
 find_program(ESPRESSO_CHROME NAMES google-chrome chromium chromium-browser "Google Chrome"
     PATHS "/Applications/Google Chrome.app/Contents/MacOS" "/Applications/Chromium.app/Contents/MacOS")
+# A page test in headless Chrome. The page writes "<verdict>: ok", or
+# "<verdict>: FAIL" and why, as the whole text of an element; the verdict is
+# matched with the element's tag edges, so the page's own source, which
+# --dump-dom also prints, cannot match it. Every page runs under a virtual
+# time budget (5 s, or BUDGET ms), so a page that awaits a timer reaches its
+# verdict on a loaded machine too. WINDOW is the window's size, "w,h".
+function(espresso_add_browser_test name page verdict)
+    cmake_parse_arguments(PARSE_ARGV 3 arg "" "WINDOW;BUDGET;FIXTURES" "")
+    if(NOT arg_BUDGET)
+        set(arg_BUDGET 5000)
+    endif()
+    set(window "")
+    if(arg_WINDOW)
+        set(window "--window-size=${arg_WINDOW}")
+    endif()
+    add_test(NAME "${name}"
+        COMMAND "${ESPRESSO_CHROME}" --headless=new --disable-gpu --no-first-run
+                "--user-data-dir=${PROJECT_BINARY_DIR}/chrome-profile" --allow-file-access-from-files
+                ${window} --virtual-time-budget=${arg_BUDGET} --dump-dom "file://${page}")
+    set_tests_properties("${name}" PROPERTIES
+        PASS_REGULAR_EXPRESSION ">${verdict}: ok<" FAIL_REGULAR_EXPRESSION ">${verdict}: FAIL"
+        TIMEOUT ${ESPRESSO_CLI_TEST_TIMEOUT} RUN_SERIAL TRUE)
+    if(arg_FIXTURES)
+        set_tests_properties("${name}" PROPERTIES FIXTURES_REQUIRED ${arg_FIXTURES})
+    endif()
+endfunction()
+
 if(ESPRESSO_CHROME)
-    add_test(NAME "page: espresso-ui.js controls send receive and reset in a browser (ui.md 7.2)"
-        COMMAND "${ESPRESSO_CHROME}" --headless=new --disable-gpu --no-first-run
-                "--user-data-dir=${PROJECT_BINARY_DIR}/chrome-profile" --allow-file-access-from-files
-                --window-size=1280,1600 --virtual-time-budget=5000 --dump-dom
-                "file://${CMAKE_CURRENT_SOURCE_DIR}/page/controls_test.html")
-    set_tests_properties("page: espresso-ui.js controls send receive and reset in a browser (ui.md 7.2)" PROPERTIES
-        PASS_REGULAR_EXPRESSION "controls: ok" FAIL_REGULAR_EXPRESSION "controls: FAIL"
-        TIMEOUT ${ESPRESSO_CLI_TEST_TIMEOUT} RUN_SERIAL TRUE)
-    # The page grid (dsl-ui.md §3): es-panel and es-section, each control in its
-    # footprint. The verdict is matched with the <pre>'s tags, as the sidecar's is.
-    add_test(NAME "page: espresso-ui.js lays out panels and sections on the page grid (dsl-ui.md 3)"
-        COMMAND "${ESPRESSO_CHROME}" --headless=new --disable-gpu --no-first-run
-                "--user-data-dir=${PROJECT_BINARY_DIR}/chrome-profile" --allow-file-access-from-files
-                --window-size=1280,1600 --virtual-time-budget=5000 --dump-dom
-                "file://${CMAKE_CURRENT_SOURCE_DIR}/page/layout_test.html")
-    set_tests_properties("page: espresso-ui.js lays out panels and sections on the page grid (dsl-ui.md 3)" PROPERTIES
-        PASS_REGULAR_EXPRESSION "<pre id=\"result\">layout: ok</pre>" FAIL_REGULAR_EXPRESSION "<pre id=\"result\">layout: FAIL"
-        TIMEOUT ${ESPRESSO_CLI_TEST_TIMEOUT} RUN_SERIAL TRUE)
+    set(pages "${CMAKE_CURRENT_SOURCE_DIR}/page")
+    espresso_add_browser_test("page: espresso-ui.js controls send receive and reset in a browser (ui.md 7.2)"
+        "${pages}/controls_test.html" controls WINDOW 1280,1600)
+    # The page grid (dsl-ui.md §3): es-panel and es-section, each control in its footprint.
+    espresso_add_browser_test("page: espresso-ui.js lays out panels and sections on the page grid (dsl-ui.md 3)"
+        "${pages}/layout_test.html" layout WINDOW 1280,1600)
     # The kits (dsl-ui.md §6): synth panels, pedals, the pedalboard, and their controls.
-    add_test(NAME "page: espresso-ui.js draws synth panels pedals and their switches (dsl-ui.md 6)"
-        COMMAND "${ESPRESSO_CHROME}" --headless=new --disable-gpu --no-first-run
-                "--user-data-dir=${PROJECT_BINARY_DIR}/chrome-profile" --allow-file-access-from-files
-                --window-size=1280,1600 --virtual-time-budget=5000 --dump-dom
-                "file://${CMAKE_CURRENT_SOURCE_DIR}/page/kits_test.html")
-    set_tests_properties("page: espresso-ui.js draws synth panels pedals and their switches (dsl-ui.md 6)" PROPERTIES
-        PASS_REGULAR_EXPRESSION "<pre id=\"result\">kits: ok</pre>" FAIL_REGULAR_EXPRESSION "<pre id=\"result\">kits: FAIL"
-        TIMEOUT ${ESPRESSO_CLI_TEST_TIMEOUT} RUN_SERIAL TRUE)
+    espresso_add_browser_test("page: espresso-ui.js draws synth panels pedals and their switches (dsl-ui.md 6)"
+        "${pages}/kits_test.html" kits WINDOW 1280,1600)
     # The canvas (canvas.md §3): pan, zoom, keys, the bar, the view kept.
-    add_test(NAME "page: espresso-ui.js pans and zooms the canvas (canvas.md 3)"
-        COMMAND "${ESPRESSO_CHROME}" --headless=new --disable-gpu --no-first-run
-                "--user-data-dir=${PROJECT_BINARY_DIR}/chrome-profile" --allow-file-access-from-files
-                --window-size=1280,800 --virtual-time-budget=5000 --dump-dom
-                "file://${CMAKE_CURRENT_SOURCE_DIR}/page/canvas_test.html")
-    set_tests_properties("page: espresso-ui.js pans and zooms the canvas (canvas.md 3)" PROPERTIES
-        PASS_REGULAR_EXPRESSION "<pre id=\"result\">canvas: ok</pre>" FAIL_REGULAR_EXPRESSION "<pre id=\"result\">canvas: FAIL"
-        TIMEOUT ${ESPRESSO_CLI_TEST_TIMEOUT} RUN_SERIAL TRUE)
+    espresso_add_browser_test("page: espresso-ui.js pans and zooms the canvas (canvas.md 3)"
+        "${pages}/canvas_test.html" canvas WINDOW 1280,800)
     # Tabs (canvas.md §4): the strip, one tab shown, routing, keys, the open tab kept.
-    add_test(NAME "page: espresso-ui.js shows one tab at a time with its routing (canvas.md 4)"
-        COMMAND "${ESPRESSO_CHROME}" --headless=new --disable-gpu --no-first-run
-                "--user-data-dir=${PROJECT_BINARY_DIR}/chrome-profile" --allow-file-access-from-files
-                --window-size=1280,800 --virtual-time-budget=5000 --dump-dom
-                "file://${CMAKE_CURRENT_SOURCE_DIR}/page/tabs_test.html")
-    set_tests_properties("page: espresso-ui.js shows one tab at a time with its routing (canvas.md 4)" PROPERTIES
-        PASS_REGULAR_EXPRESSION "<pre id=\"result\">tabs: ok</pre>" FAIL_REGULAR_EXPRESSION "<pre id=\"result\">tabs: FAIL"
-        TIMEOUT ${ESPRESSO_CLI_TEST_TIMEOUT} RUN_SERIAL TRUE)
+    espresso_add_browser_test("page: espresso-ui.js shows one tab at a time with its routing (canvas.md 4)"
+        "${pages}/tabs_test.html" tabs WINDOW 1280,800)
     # Loop matrices (canvas.md §6): launches, stops, the piece's reports, loads, keys.
-    add_test(NAME "page: espresso-ui.js launches and stops clips on a row of a bank's slots (canvas.md 6)"
-        COMMAND "${ESPRESSO_CHROME}" --headless=new --disable-gpu --no-first-run
-                "--user-data-dir=${PROJECT_BINARY_DIR}/chrome-profile" --allow-file-access-from-files
-                --window-size=1280,800 --virtual-time-budget=5000 --dump-dom
-                "file://${CMAKE_CURRENT_SOURCE_DIR}/page/clips_test.html")
-    set_tests_properties("page: espresso-ui.js launches and stops clips on a row of a bank's slots (canvas.md 6)" PROPERTIES
-        PASS_REGULAR_EXPRESSION "<pre id=\"result\">clips: ok</pre>" FAIL_REGULAR_EXPRESSION "<pre id=\"result\">clips: FAIL"
-        TIMEOUT ${ESPRESSO_CLI_TEST_TIMEOUT} RUN_SERIAL TRUE)
+    espresso_add_browser_test("page: espresso-ui.js launches and stops clips on a row of a bank's slots (canvas.md 6)"
+        "${pages}/clips_test.html" clips WINDOW 1280,800)
     # The GUI editor's sidecar module against a fake of Tauri's shell plugin
-    # (tauri-editor.md §4). The verdict is matched with the <pre>'s tags, so
-    # the test's own source, which --dump-dom also prints, cannot match it.
-    add_test(NAME "editor: sidecar.js matches responses to requests and passes notifications (tauri-editor.md 4)"
-        COMMAND "${ESPRESSO_CHROME}" --headless=new --disable-gpu --no-first-run
-                "--user-data-dir=${PROJECT_BINARY_DIR}/chrome-profile" --allow-file-access-from-files
-                --virtual-time-budget=5000 --dump-dom
-                "file://${CMAKE_CURRENT_SOURCE_DIR}/editor/sidecar_test.html")
-    set_tests_properties("editor: sidecar.js matches responses to requests and passes notifications (tauri-editor.md 4)"
-        PROPERTIES PASS_REGULAR_EXPRESSION ">sidecar: ok<" FAIL_REGULAR_EXPRESSION ">sidecar: FAIL"
-        TIMEOUT ${ESPRESSO_CLI_TEST_TIMEOUT} RUN_SERIAL TRUE)
+    # (tauri-editor.md §4).
+    espresso_add_browser_test("editor: sidecar.js matches responses to requests and passes notifications (tauri-editor.md 4)"
+        "${CMAKE_CURRENT_SOURCE_DIR}/editor/sidecar_test.html" sidecar)
     # The GUI editor's window against a fake of Tauri (tauri-editor.md §5.2):
     # a page CMake writes into the build tree, with the editor's import map.
     if(ESPRESSO_BUILD_EDITOR)
         get_property(EDITOR_IMPORT_MAP GLOBAL PROPERTY ESPRESSO_EDITOR_IMPORT_MAP)
         set(EDITOR_WEB "file://${PROJECT_SOURCE_DIR}/src/apps/editor/web")
         set(EXAMPLES "${PROJECT_SOURCE_DIR}/examples")
-        configure_file(editor/editor_test.html.in "${CMAKE_CURRENT_BINARY_DIR}/editor/editor_test.html" @ONLY)
-        add_test(NAME "editor: the window opens, edits, saves, plays, and keys each scheme (tauri-editor.md 5.2, 5.3)"
-            COMMAND "${ESPRESSO_CHROME}" --headless=new --disable-gpu --no-first-run
-                    "--user-data-dir=${PROJECT_BINARY_DIR}/chrome-profile" --allow-file-access-from-files
-                    --window-size=1280,800 --virtual-time-budget=20000 --dump-dom
-                    "file://${CMAKE_CURRENT_BINARY_DIR}/editor/editor_test.html")
-        set_tests_properties("editor: the window opens, edits, saves, plays, and keys each scheme (tauri-editor.md 5.2, 5.3)"
-            PROPERTIES PASS_REGULAR_EXPRESSION ">editor: ok<" FAIL_REGULAR_EXPRESSION ">editor: FAIL"
-            TIMEOUT ${ESPRESSO_CLI_TEST_TIMEOUT} RUN_SERIAL TRUE)
+        set(editorPages "${CMAKE_CURRENT_BINARY_DIR}/editor")
+        configure_file(editor/editor_test.html.in "${editorPages}/editor_test.html" @ONLY)
+        espresso_add_browser_test("editor: the window opens, edits, saves, plays, and keys each scheme (tauri-editor.md 5.2, 5.3)"
+            "${editorPages}/editor_test.html" editor WINDOW 1280,800 BUDGET 20000)
 
         # The window at 375 px (design-guide.md §4.3): each screenshot state in an
         # iframe that wide, since a headless window is at least 500 px.
-        set(EDITOR_TEST_PAGE "${CMAKE_CURRENT_BINARY_DIR}/editor/editor_test.html")
-        configure_file(editor/narrow_test.html.in "${CMAKE_CURRENT_BINARY_DIR}/editor/narrow_test.html" @ONLY)
-        add_test(NAME "editor: the window holds at 375 px in every state (design-guide.md 4.3)"
-            COMMAND "${ESPRESSO_CHROME}" --headless=new --disable-gpu --no-first-run
-                    "--user-data-dir=${PROJECT_BINARY_DIR}/chrome-profile" --allow-file-access-from-files
-                    --window-size=800,800 --virtual-time-budget=60000 --dump-dom
-                    "file://${CMAKE_CURRENT_BINARY_DIR}/editor/narrow_test.html")
-        set_tests_properties("editor: the window holds at 375 px in every state (design-guide.md 4.3)"
-            PROPERTIES PASS_REGULAR_EXPRESSION ">narrow: ok<" FAIL_REGULAR_EXPRESSION ">narrow: FAIL"
-            TIMEOUT ${ESPRESSO_CLI_TEST_TIMEOUT} RUN_SERIAL TRUE)
+        set(EDITOR_TEST_PAGE "${editorPages}/editor_test.html")
+        configure_file(editor/narrow_test.html.in "${editorPages}/narrow_test.html" @ONLY)
+        espresso_add_browser_test("editor: the window holds at 375 px in every state (design-guide.md 4.3)"
+            "${editorPages}/narrow_test.html" narrow WINDOW 800,800 BUDGET 60000)
 
         # The layout's system (design-guide.md §4.1, §4.4): bars, controls, rows, and
         # insets in every screenshot state, measured against the stylesheet's units.
-        configure_file(editor/layout_test.html.in "${CMAKE_CURRENT_BINARY_DIR}/editor/layout_test.html" @ONLY)
-        add_test(NAME "editor: every bar, control, row, and inset keeps the layout's units (design-guide.md 4.1, 4.4)"
-            COMMAND "${ESPRESSO_CHROME}" --headless=new --disable-gpu --no-first-run
-                    "--user-data-dir=${PROJECT_BINARY_DIR}/chrome-profile" --allow-file-access-from-files
-                    --window-size=1400,900 --virtual-time-budget=60000 --dump-dom
-                    "file://${CMAKE_CURRENT_BINARY_DIR}/editor/layout_test.html")
-        set_tests_properties("editor: every bar, control, row, and inset keeps the layout's units (design-guide.md 4.1, 4.4)"
-            PROPERTIES PASS_REGULAR_EXPRESSION ">layout: ok<" FAIL_REGULAR_EXPRESSION ">layout: FAIL"
-            TIMEOUT ${ESPRESSO_CLI_TEST_TIMEOUT} RUN_SERIAL TRUE)
+        configure_file(editor/layout_test.html.in "${editorPages}/layout_test.html" @ONLY)
+        espresso_add_browser_test("editor: every bar, control, row, and inset keeps the layout's units (design-guide.md 4.1, 4.4)"
+            "${editorPages}/layout_test.html" layout WINDOW 1400,900 BUDGET 60000)
 
         # The editor's tokenizer against the C++ highlighter (tauri-editor.md
         # §5.4): editor_highlights asks the sidecar to highlight every .lisp
@@ -209,21 +176,15 @@ if(ESPRESSO_CHROME)
         set_target_properties(editor_highlights PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/tests")
         espresso_set_warnings(editor_highlights)
         set_property(GLOBAL APPEND PROPERTY ESPRESSO_TEST_TARGETS editor_highlights)
-        set(HIGHLIGHTS "${CMAKE_CURRENT_BINARY_DIR}/editor/highlights.json")
+        set(HIGHLIGHTS "${editorPages}/highlights.json")
         add_test(NAME "editor: the sidecar highlights every example (tauri-editor.md 5.4)"
             COMMAND editor_highlights "${HIGHLIGHTS}" "${PROJECT_SOURCE_DIR}/examples"
                     "${CMAKE_CURRENT_SOURCE_DIR}/editor/highlight")
         set_tests_properties("editor: the sidecar highlights every example (tauri-editor.md 5.4)"
             PROPERTIES FIXTURES_SETUP editorHighlights TIMEOUT ${ESPRESSO_CLI_TEST_TIMEOUT})
-        configure_file(editor/highlight_test.html.in "${CMAKE_CURRENT_BINARY_DIR}/editor/highlight_test.html" @ONLY)
-        add_test(NAME "editor: lisp.js highlights every example as the C++ highlighter does (tauri-editor.md 5.4)"
-            COMMAND "${ESPRESSO_CHROME}" --headless=new --disable-gpu --no-first-run
-                    "--user-data-dir=${PROJECT_BINARY_DIR}/chrome-profile" --allow-file-access-from-files
-                    --window-size=1280,800 --virtual-time-budget=10000 --dump-dom
-                    "file://${CMAKE_CURRENT_BINARY_DIR}/editor/highlight_test.html")
-        set_tests_properties("editor: lisp.js highlights every example as the C++ highlighter does (tauri-editor.md 5.4)"
-            PROPERTIES PASS_REGULAR_EXPRESSION ">highlight: ok<" FAIL_REGULAR_EXPRESSION ">highlight: FAIL"
-            FIXTURES_REQUIRED editorHighlights TIMEOUT ${ESPRESSO_CLI_TEST_TIMEOUT} RUN_SERIAL TRUE)
+        configure_file(editor/highlight_test.html.in "${editorPages}/highlight_test.html" @ONLY)
+        espresso_add_browser_test("editor: lisp.js highlights every example as the C++ highlighter does (tauri-editor.md 5.4)"
+            "${editorPages}/highlight_test.html" highlight WINDOW 1280,800 BUDGET 10000 FIXTURES editorHighlights)
     endif()
 else()
     message(STATUS "Chrome not found: the browser tests of the page controls and the editor are skipped")

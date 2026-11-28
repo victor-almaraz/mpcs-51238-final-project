@@ -22,6 +22,7 @@ guide/troubleshooting
 
 language
 library
+reference/primitives
 ir
 reference/cpp
 ```

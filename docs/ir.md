@@ -215,4 +215,4 @@ A sawtooth through a filter swept by an LFO, enveloped by a half-beat metronome,
 | Mapper operations | `neg`, `abs`, `exp`, `log`, `sin`, `cos`, `tanh`, `floor`, `round`, `subtract`, `divide`, `pow`, `min`, `max`, `quantize`, `clamp`, `scale`, `scaleExp` |
 | Events | `noteToFreq`, `gate`, `velocity`, `controlChange`, `pitchBend`, `eventFilter`, `oscNotes`, `voiceSplit`, `triggerNotes`, `metro`, `sequencer`, `chance`, `threshold`, `sampleAndHold`, `clipPlayer` |
 
-The parameters, defaults, ranges, and ports of each type are listed in `src/metadata/primitiveSpec.cpp`.
+[Primitives](reference/primitives.md) lists the parameters, defaults, ranges, and ports of each type, from the tables in `src/metadata/primitiveSpec.cpp`.

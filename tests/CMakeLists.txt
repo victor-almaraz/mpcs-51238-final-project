@@ -45,6 +45,14 @@ endforeach()
 if(TARGET server_tests)
     target_link_libraries(server_tests PRIVATE espresso::interpreter)
 endif()
+# docs/reference/primitives.md is written from the primitive tables; the
+# interpreter suite fails when it differs, and this target rewrites it.
+if(TARGET interpreter_tests)
+    add_custom_target(primitive-reference
+        COMMAND interpreter_tests "[.update-primitive-reference]"
+        COMMENT "Writing docs/reference/primitives.md from the primitive tables"
+        VERBATIM)
+endif()
 # The libcurl transport's test runs in an executable of its own. On
 # macOS, curl_global_init() leaves libdispatch threads that nothing can
 # join, and ThreadSanitizer kills the child of any later fork in the same

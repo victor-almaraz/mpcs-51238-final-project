@@ -148,7 +148,7 @@ Every primitive is called by its name in kebab-case (`sine-osc`, `delay-line`, `
 (add :in [a b] :out sum)
 ```
 
-Choice parameters take keywords (`:mode :low`); text parameters take strings (`:device "keyboard"`); list parameters take vectors (`:levels [1 0.5]`); text list parameters take vectors of strings (`:fields ["/main/temp" "/wind/speed"]`). [IR format](ir.md#primitive-types) lists the primitive types; the tables in `src/metadata/primitiveSpec.cpp` list their parameters, ranges, defaults, and ports.
+Choice parameters take keywords (`:mode :low`); text parameters take strings (`:device "keyboard"`); list parameters take vectors (`:levels [1 0.5]`); text list parameters take vectors of strings (`:fields ["/main/temp" "/wind/speed"]`). [Primitives](reference/primitives.md) lists every primitive with its parameters, ranges, defaults, and ports.
 
 A `sequencer` moves to its next value at each event on `:in` other than a note-off, writes the current value to the control pipe on `:out`, and emits it as a value event on `:events`. `:order` is `:forward` (the default), `:backward`, `:ping-pong` (to the last value and back, without repeating either end), `:random` (drawn from a generator seeded from the project seed and the node ID), or `:once`. `:forward` and `:backward` wrap at the ends. `:once` stops on the last value: later events leave `:out` at the last value and emit nothing on `:events`, so the sequence plays one time. A node that adopts a sequencer's state across a plan swap keeps its position, including the end of a `:once` sequence.
 

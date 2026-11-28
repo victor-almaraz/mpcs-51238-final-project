@@ -163,6 +163,7 @@ scripts/badges.sh
 valgrind --leak-check=full --error-exitcode=1 build/tests/<module>_tests
 cmake --build build --target docs
 cmake --build build --target manual
+cmake --build build --target primitive-reference
 build/bin/espresso-client --compile examples/wavetable/wavetable.lisp > wavetable.ir.json
 ```
 
@@ -317,4 +318,4 @@ v2 passes when a piece of 8 instruments with 2 effects each and 8 voices per ins
 - Write `docs/` in a formal reference-manual style: no first person, no hedging, no history or change narration, one term per concept.
 - Document public C++ APIs with Doxygen comments.
 - `docs/api/` is the Doxygen HTML of `include/espresso/`, with `docs/api.md` as its main page. Regenerate it with `cmake --build build --target docs` and commit it with any change to a public header.
-- The manual is `docs/` and the C++ API built by Sphinx (MyST-Parser, Breathe) into `build/docs/html/`, uncommitted: `cmake --build build --target manual`, with the tool versions of `docs/requirements.txt` (README, Documentation). It fails on any warning; keep it warning-free.
+- The manual is `docs/` and the C++ API built by Sphinx (MyST-Parser, Breathe) into `build/docs/html/`, uncommitted: `cmake --build build --target manual`, with the tool versions of `docs/requirements.txt` (README, Documentation). It fails on any warning; keep it warning-free. `docs/reference/primitives.md` is written from the primitive tables: rewrite it with the `primitive-reference` target after changing them, and commit it with the change.

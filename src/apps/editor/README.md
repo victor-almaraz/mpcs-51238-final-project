@@ -5,9 +5,12 @@ A desktop editor built with Tauri: a web interface in the system's webview, over
 | Path | Holds |
 |---|---|
 | `web/` | The web interface: `index.html.in`, from which CMake writes `index.html` with the import map, and its scripts and stylesheet. Plain ES modules: no npm, no bundler, no build step |
-| `web/vendor/` | CodeMirror 6 and the packages it imports, and the fonts (Noto Sans, JetBrains Mono), fetched by CMake from the lists in `cmake/EditorWeb.cmake` |
+| `web/vendor/` | CodeMirror 6 and the packages it imports, marked, and the fonts (Noto Sans, JetBrains Mono), fetched by CMake from the lists in `cmake/EditorWeb.cmake` |
+| `web/docs/` | The references Help opens, `language.md` and `library.md`, copied by CMake from `docs/` |
+| `templates/` | The projects New Project… starts from, described in `templates/README.md` |
 | `src-tauri/` | Tauri's entry point (`src/main.rs`), its configuration (`tauri.conf.json`), and the window's permissions (`capabilities/default.json`) |
-| `src-tauri/binaries/` | The client as the sidecar, `espresso-client-<target triple>`, placed by CMake |
+| `src-tauri/binaries/` | The client as the sidecar, `espresso-client-<target triple>`, and the server, `espresso-server-<target triple>`, placed by CMake |
+| `src-tauri/resources/` | The templates and the examples the application bundles for New Project… and Open Example…, copied by CMake from `templates/` and `examples/` |
 
 ## Requirements
 
@@ -27,7 +30,7 @@ cargo tauri dev
 
 The build fetches the web packages, writes `web/index.html`, and places the client and the server in `src-tauri/binaries/`. `cargo tauri dev` builds the Rust and opens the window, which starts `espresso-server` and then the client as its sidecar. Closing the window stops the server; so do Ctrl+C in the terminal and `kill`. When another `espresso-server` already listens on the default port, the editor uses it and leaves it running. When the server stops, a banner under the top bar says why, and Retry starts it again.
 
-Lists and block comments over several lines fold from the chevrons in the margin beside the line numbers, which show while the pointer is over the gutter, or with Ctrl+Alt+[ and Ctrl+Alt+] (⌥⌘[ and ⌥⌘] on macOS); Fold All and Unfold All are in Show All Commands. Completion suggests, as you type or on Ctrl+Space, the names bound around the cursor, the names the open files and the standard library define, the language's forms, builtins, and primitives, and after a `:` the keywords of the call: a primitive's parameters and ports, the `:initarg`s of the class a `make` names, or a function's `&key` parameters.
+Lists and block comments over several lines fold from the chevrons in the margin beside the line numbers, which show while the pointer is over the gutter, or, in the CUA scheme, with Ctrl+Alt+[ and Ctrl+Alt+] (⌥⌘[ and ⌥⌘] on macOS); Fold All and Unfold All are in Show All Commands. Completion suggests, during typing or on Ctrl+Space, the names bound around the cursor, the names the open files and the standard library define, the language's forms, builtins, and primitives, and after a `:` the keywords of the call: a primitive's parameters and ports, the `:initarg`s of the class a `make` names, or a function's `&key` parameters.
 
 A piece whose project names a page (`:page-port` in `project.lisp`) shows it in a tab, "Page · NAME", the first time a plan with a page plays, and again when Play or Update plays while its tab is closed: the page served on `127.0.0.1` by the server, with Reload, Open in Window, and Open in Browser. The Page button beside Stop, shown while the piece serves a page, and View → Show Page open it again. Pulled out of the tab strip, the page's tab opens the page in a window of its own where it is dropped, for a second screen; the window is a sub-window of the editor and closes with it.
 
@@ -35,7 +38,7 @@ A piece whose project names a page (`:page-port` in `project.lisp`) shows it in 
 
 ## Command line
 
-The application's one executable, `espresso` in the bundle (`target/debug/espresso-editor` from `cargo build`), chooses by its first argument:
+The application has one executable: `espresso`, which `cargo tauri build` produces, or `target/debug/espresso-editor` from `cargo build`. Whether `cargo tauri build` also makes an installable bundle depends on `bundle.active`, which the committed `tauri.conf.json` sets to false. The executable chooses by its first argument:
 
 | Command | Runs |
 |---|---|
@@ -45,9 +48,9 @@ The application's one executable, `espresso` in the bundle (`target/debug/espres
 | `espresso --headless --render PIECE --out FILE.wav [options]` | A piece offline to a WAV file |
 | `espresso --tui [client options]` | The terminal editor, with `espresso-client`'s options |
 
-PIECE is IR (an `.ir.json` file, or `-` for standard input), a `.lisp` entry file, or a project directory, whose entry is `main.lisp`, else `NAME.lisp` in a directory `NAME`, else its only `.lisp` file other than `project.lisp`. A `.lisp` piece is compiled by the bundled client and given to the server on standard input, with the project as `--root` unless one is named. Ctrl+C and SIGTERM pass to the server or the terminal editor, and the command ends with its status. Open Folder… (Ctrl+O, or ⌘O on macOS) opens a project; the window opens the last one again when it starts. New Project… makes a project from a template (an empty piece, a sine tone, or a MIDI instrument) in a new folder, by default in `~/Projects`, and Open Example… copies one of the examples to a folder of its own; either opens at its entry.
+PIECE is IR (an `.ir.json` file, or `-` for standard input), a `.lisp` entry file, or a project directory, whose entry is `main.lisp`, else `NAME.lisp` in a directory `NAME`, else its only `.lisp` file other than `project.lisp`. A `.lisp` piece is compiled by the bundled client and given to the server on standard input, with the project as `--root` unless one is named. Ctrl+C and SIGTERM pass to the server or the terminal editor, and the command ends with its status. Open Folder… (Ctrl+O, or ⌘O on macOS) opens a project; the window opens the last one again when it starts. New Project… makes a project from a template (an empty piece, a sine tone, or a MIDI instrument) in a new folder, by default in the folder used last, else in `~/Projects`, and Open Example… copies one of the examples to a folder of its own; either opens at its entry.
 
-The key scheme is chosen from the status bar: CUA (the default), Emacs, Vim, or nano. CUA follows GNOME's standard keys, then VS Code's where GNOME has none. In every scheme, Shift+Ctrl+Space plays or updates, F6 stops, F8 and Shift+F8 go to the next and previous problem, F9 and Ctrl+F9 toggle the side bar and the panel, F12 goes to the definition of the name at the cursor, Shift+Ctrl+K shows all commands, Ctrl+F6 and Shift+Ctrl+F6 move focus between the side bar, the tabs, the code, the panel, and the status bar, and Ctrl+? lists the keys. Ctrl+Tab, Ctrl+Page Down, and their Shift forms go to the next and previous tab, and Alt+1…9 to the first nine (⌘1…9 on macOS). On macOS, ⌘ takes Ctrl's place. The menu bar holds the commands, and the context menus and Show All Commands the rest: the system's bar on macOS, a bar in the window on Linux, where F10 opens it. Each item shows the key the scheme gives it, where that key is one chord.
+The key scheme is chosen from the status bar: CUA (the default), Emacs, Vim, or nano. CUA follows GNOME's standard keys, then VS Code's where GNOME has none. In every scheme, Shift+Ctrl+Space plays or updates, F6 stops, F8 and Shift+F8 go to the next and previous problem, F9 and Ctrl+F9 toggle the side bar and the panel, F12 goes to the definition of the name at the cursor, Shift+Ctrl+K shows all commands, Ctrl+F6 and Shift+Ctrl+F6 move focus between the side bar, the tabs, the code, the panel, and the status bar, and Ctrl+? lists the keys. In the CUA scheme, Ctrl+Tab and Ctrl+Page Down go to the next tab, and Shift+Ctrl+Tab and Ctrl+Page Up to the previous one; in every scheme, Alt+1…9 go to the first nine tabs (⌘1…9 on macOS). On macOS, ⌘ takes Ctrl's place. The menu bar holds the commands, and the context menus and Show All Commands the rest: the system's bar on macOS, a bar in the window on Linux, where F10 opens it. Each item shows the key the scheme gives it, where that key is one chord.
 
 | Command | CUA | Emacs | Vim | nano |
 |---|---|---|---|---|
@@ -62,7 +65,7 @@ The key scheme is chosen from the status bar: CUA (the default), Emacs, Vim, or 
 | Evaluate Last Form: the form before the cursor | Shift+Enter | C-x C-e | `:eval`, C-x C-e | M-R |
 | Problems | Shift+Ctrl+M | | | |
 | Go to File: the project's files; `name:12` opens at line 12, `@` lists definitions | Ctrl+K | C-x b | `:b` | M-B |
-| Show All Commands, each with its keys | Shift+Ctrl+K | M-x | | |
+| Show All Commands, each with its keys | Shift+Ctrl+K | M-x | Shift+Ctrl+K | Shift+Ctrl+K |
 | Go to Line | Ctrl+I | M-g | `:12` | M-G |
 | Find; next and previous match | Ctrl+F; Ctrl+G, Shift+Ctrl+G | C-s | `/` | ^W |
 | Find and Replace | Ctrl+H | | | |

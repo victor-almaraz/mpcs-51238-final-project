@@ -6,7 +6,8 @@ The standard library is a set of files written in the language and compiled into
 |---|---|
 | `std/voices` | `voices`: polyphony over `voice-split` |
 | `std/instruments` | `subtractive`, `fm`, `pluck`, `sampler`, and `drum-kit` instruments, and the `play` and `voice` generic functions |
-| `std/effects` | `echo`, `chorus`, `reverb`, `overdrive`, `granular-delay`, `spectral-delay`, and `freeze` effects, and the `process` generic function |
+| `std/effects` | `echo`, `chorus`, `reverb`, `overdrive`, `granular-delay`, `spectral-delay`, and `freeze` effects, the `process` generic function, and `stomp` and `chain` |
+| `std/modulators` | `lfo-mod`, `random-mod`, `step-mod`, `envelope-mod`, and `follower` modulators, `beat-rate`, `modulate`, and `modulated` |
 
 ## std/voices
 
@@ -27,7 +28,7 @@ The standard library is a set of files written in the language and compiled into
     (audio-out :in out :channel 0)))
 ```
 
-`(voices count notes build)` splits the notes on the event pipe `notes` among `count` voices with `voice-split` and calls `(build voice-notes)` once for each voice, with an event pipe that carries that voice's notes. When every voice is sounding, a new note takes the voice of the oldest note, which receives a note-off first. The calls to `build` are numbered in voice order, so each voice keeps its node IDs, and its state, when the piece is replaced. `voices` returns the list of `build`'s results. Voices that write the same audio pipe sum there.
+`(voices count notes build)` splits the notes on the event pipe `notes` among `count` voices with `voice-split` and calls `(build voice-notes)` once for each voice, with an event pipe that carries that voice's notes. A note goes to the voice already sounding the same note on the same channel, so one note-off ends it; otherwise to the lowest-numbered free voice. When every voice is sounding, a new note takes the voice of the oldest note, which receives a note-off first. The calls to `build` are numbered in voice order, so each voice keeps its node IDs, and its state, when the piece is replaced. `voices` returns the list of `build`'s results. Voices that write the same audio pipe sum there.
 
 ## std/instruments
 
@@ -46,7 +47,7 @@ The standard library is a set of files written in the language and compiled into
     (audio-out :in out :channel 0)))
 ```
 
-An instrument is an instance of a subclass of `instrument`. `(play instrument notes out)` plays the notes on the event pipe `notes` into the audio pipe `out`: it calls `voices` with the instrument's voice count and builds each voice with `(voice instrument voice-notes out)`. The voices sum, and the sum is scaled by the instrument's `level` into `out`. A new instrument is a subclass with a `voice` method that writes one voice, at full scale, to the pipe it is given; it inherits `play`.
+An instrument is an instance of a subclass of `instrument`. `(play instrument notes out)` plays the notes on the event pipe `notes` into the audio pipe `out`: it calls `voices` with the instrument's voice count and builds each voice with `(voice instrument voice-notes out)`. The voices sum, and the sum is scaled by the instrument's `level` into `out`. A new instrument is a subclass with a `voice` method that writes one voice, at full scale, to the pipe it is given; it inherits `play`. `drum-kit` defines `play` itself, with a fixed voice for each drum, so it has no `voice` method and ignores `:voices`.
 
 Each voice's amplitude follows its note's velocity. For writing voices, the file also defines `enveloped`, a class with the `:attack`, `:decay`, `:sustain`, and `:release` slots that `subtractive` and `fm` inherit; `(amplitude instrument notes in out)`, which applies an `enveloped` instrument's envelope to `in`, gated by `notes` and scaled by each note's velocity; and `(note-velocity notes)`, a control pipe of each note's velocity from 0 to 1.
 
@@ -90,7 +91,7 @@ Each voice's amplitude follows its note's velocity. For writing voices, the file
 
 A keyword value is quoted in a slot's initarg: `:wave ':pulse`. Unquoted, `:pulse` would read as the next keyword argument.
 
-`(synth-panel instrument)` draws an instrument's `:control` slots as knobs, each starting at the slot's value, and sets each slot to its knob's pipe, so it comes before `play`:
+`(synth-panel [label] instrument item...)` draws an instrument's `:control` slots as knobs, under `label` (by default the class's name), followed by the further items, sections for instance, each starting at the slot's value, and sets each slot to its knob's pipe, so it comes before `play`:
 
 ```lisp
 (let ((synth (make subtractive :cutoff 1200hz :level -9db))
@@ -100,7 +101,7 @@ A keyword value is quoted in a slot's initarg: `:wave ':pulse`. Unquoted, `:puls
   (page panel))
 ```
 
-The library's controls: every instrument's `:level`; `subtractive`'s, `fm`'s, and `sampler`'s `:attack`, `:sustain`, and `:release`; `subtractive`'s `:cutoff`, `:env-amount`, `:resonance`, and `:decay`; `fm`'s `:ratio` and `:index`; `pluck`'s `:feedback` and `:damping`. The other slots are fixed when the voices are built, so they have none: `:voices`, `:wave`, and `sampler`'s `:buffer`, `:root`, `:start`, and `:loop`. `enveloped`'s `:decay` has none, as `fm` doubles it in arithmetic that takes no pipe; `subtractive` gives its own a control.
+The library's controls: every instrument's `:level`; `subtractive`'s, `fm`'s, and `sampler`'s `:attack`, `:sustain`, and `:release`; `subtractive`'s `:cutoff`, `:env-amount`, `:resonance`, and `:decay`; `fm`'s `:ratio` and `:index`; `pluck`'s `:feedback` and `:damping`; `drum-kit`'s `:kick-level`, `:kick-decay`, `:snare-level`, `:snare-decay`, `:clap-level`, `:clap-decay`, `:hat-level`, `:hat-decay`, and `:tone`. The other slots are fixed when the voices are built, so they have none: `:voices`, `:wave`, and `sampler`'s `:buffer`, `:root`, `:start`, and `:loop`. `enveloped`'s `:decay` has none, as `fm` doubles it in arithmetic that takes no pipe; `subtractive` gives its own a control.
 
 ## std/effects
 
@@ -119,7 +120,7 @@ The library's controls: every instrument's `:level`; `subtractive`'s, `fm`'s, an
 
 An effect is an instance of a subclass of `effect`. `(process effect in out)` writes the audio pipe `in`, processed, to the audio pipe `out`. Each effect's primary method writes its wet signal; an `:around` method on `effect` passes it a pipe for the wet signal and crossfades the dry input and the wet signal into `out`, linearly, by the effect's `mix`. A new effect is a subclass with a `process` method that writes its wet signal; it inherits the mix.
 
-An effect runs as many channels as the pipe it writes: its inner pipes take that pipe's channel count, and a narrower input feeds every channel, as a mono input does a stereo filter. A stereo pipe through `reverb` keeps its sides. `granular-delay` is the exception: its grains are panned within its `:spread` of the centre, so on two channels it centres what it hears. `(output-channels effect in)` is the channel count an effect writes given the audio pipe `in`, for `chain`: `in`'s by default. An effect that changes the count, such as one that widens a mono input to two sides, defines a method:
+An effect runs as many channels as the pipe it writes: its inner pipes take that pipe's channel count, and a narrower input feeds every channel, as a mono input does a stereo filter. A stereo pipe through `reverb` keeps its sides. `granular-delay` is the exception: its grains play at the centre of the stereo field (`grains`' `:spread` of 0), so on two channels it centres what it hears. `(output-channels effect in)` is the channel count an effect writes given the audio pipe `in`, for `chain`: `in`'s by default. An effect that changes the count, such as one that widens a mono input to two sides, defines a method:
 
 ```lisp
 (defclass widen (effect) ())
@@ -159,7 +160,7 @@ An effect runs as many channels as the pipe it writes: its inner pipes take that
 
 ### Pedals and chains
 
-`(chain in out effect ...)` runs the effects in series from the audio pipe `in` to the audio pipe `out`, each as `(stomp effect from to)`, and returns a `pedalboard` of their pedals, in the order of the chain, for `page`. The pipe between two effects is as wide as `output-channels` says of the first; the last effect writes `out`, of any width. A chain of any channel counts is one call, and pipes whose widths do not suit an effect are the piece's to avoid; a chain of no effects is an error, and so is one instance twice. Its pedals are page controls, so a piece that chains effects needs `:page-port` in `project.lisp`; a piece without one passes each effect with `process`:
+`(chain in out effect ...)` runs the effects in series from the audio pipe `in` to the audio pipe `out`, each as `(stomp effect from to)`, and returns a `pedalboard` of their pedals, in the order of the chain, for `page`. The pipe between two effects is as wide as `output-channels` says of the first; the last effect writes `out`, of any width. A chain of any channel counts is one call. A chain of no effects is an error, and so is one instance twice. Its pedals are page controls, so a piece that chains effects needs `:page-port` in `project.lisp`; a piece without one passes each effect with `process`:
 
 ```lisp
 (defpiece main ()
@@ -169,7 +170,7 @@ An effect runs as many channels as the pipe it writes: its inner pipes take that
     (audio-out :in out :channel 0)))
 ```
 
-`(stomp effect in out)` draws the effect as a `pedal` of its `:control` slots with a `footswitch` labelled On, scales its mix by the footswitch, eased over 20 ms so a stomp does not click, so a bypassed effect passes its dry input, processes it from `in` to `out`, and returns the pedal. A new effect class with `:control` slots is a pedal on the board as the library's are:
+`(stomp effect in out)` draws the effect as a `pedal` of its `:control` slots with a `footswitch` labelled On, scales its mix by the footswitch, eased over 20 ms so that a stomp does not click, processes it from `in` to `out`, and returns the pedal. A bypassed effect passes its dry input. A new effect class with `:control` slots is a pedal on the board as the library's are:
 
 ```lisp
 (defclass fuzz (effect)
@@ -177,9 +178,9 @@ An effect runs as many channels as the pipe it writes: its inner pipes take that
    (tone  :initarg :tone  :initform 3khz :accessor tone :control (knob :min 500hz :max 8khz))))
 ```
 
-The library's controls: every effect's `:mix`; `echo`'s `:feedback` and `:damping`; `chorus`'s `:rate`; `reverb`'s `:damping`; `overdrive`'s `:drive`, `:tone`, and `:level`; `spectral-delay`'s `:time`, `:spread`, and `:feedback`; `freeze`'s `:hold`, as a toggle; `granular-delay`'s `:density`, `:duration`, `:jitter`, `:pitch`, and `:pitch-jitter`. The other slots are fixed when the effect is built or are used in arithmetic that takes no pipe, so they have none: `echo`'s `:time`, `chorus`'s `:delay` and `:depth`, `reverb`'s `:size`, lengths, and FFT sizes.
+The library's controls: every effect's `:mix`; `echo`'s `:feedback` and `:damping`; `chorus`'s `:rate`; `reverb`'s `:damping`; `overdrive`'s `:drive`, `:tone`, and `:level`; `spectral-delay`'s `:time`, `:spread`, and `:feedback`; `freeze`'s `:hold`, as a toggle; `granular-delay`'s `:density`, `:duration`, `:jitter`, `:pitch`, and `:pitch-jitter`. The other slots are fixed when the effect is built or are used in arithmetic that takes no pipe, so they have none: `echo`'s `:time`, `chorus`'s `:delay` and `:depth`, `reverb`'s `:size`, `granular-delay`'s `:time`, `:length`, and `:record`, `spectral-delay`'s `:shape` and `:max-time`, `freeze`'s `:fade`, and the FFT sizes.
 
-Each slot of the library classes has an accessor named after its initarg, except `effect`'s `:mix`, whose accessor is `wet-mix`, as `mix` is a primitive; `instrument`'s `:voices` has `voice-count`. Accessors are generic functions shared by the classes that have a slot of the name: `(cutoff s)` reads a `subtractive`'s cutoff, `(damping e)` an `echo`'s or a `reverb`'s damping, and `(set! (cutoff s) 600hz)` changes a cutoff before `play` builds the voices.
+Each slot of the library classes has an accessor named after its initarg, except these: `effect`'s `:mix` has `wet-mix`, as `mix` is a primitive; `instrument`'s `:voices`, `voice-count`; `sampler`'s `:buffer`, `:start`, and `:loop`, `sample-buffer`, `sample-start`, and `loop-mode`; `granular-delay`'s `:length`, `ring-length`; `lfo-mod`'s `:shape` and `:phase`, `lfo-shape` and `lfo-phase`; `envelope-mod`'s `:notes`, `envelope-notes`; `follower`'s `:in` and `:time`, `followed` and `follow-time`. Accessors are generic functions shared by the classes that have a slot of the name: `(cutoff s)` reads a `subtractive`'s cutoff, `(damping e)` an `echo`'s or a `reverb`'s damping, and `(set! (cutoff s) 600hz)` changes a cutoff before `play` builds the voices.
 
 ## std/modulators
 
@@ -214,7 +215,7 @@ A modulator is an instance of a subclass of `modulator`: a source of a control s
 | `step-mod` | `:rate` | 4 Hz | Steps a second, 0.1 to 30 Hz on its knob |
 | | `:steps` | `[0 0.5 1 0.5]` | The values, each 0 to 1, in turn, the first from the start |
 | `envelope-mod` | `:notes` | | The event pipe whose notes start it; required |
-| | `:attack`, `:decay`, `:sustain`, `:release` | 10 ms, 300 ms, 0.5, 500 ms | Rises over the attack at each note, falls over the decay to the sustain while it is held, and over the release after it; unipolar |
+| | `:attack`, `:decay`, `:sustain`, `:release` | 10 ms, 300 ms, 0.5, 500 ms | Rises over the attack at each note, falls over the decay to the sustain while it is held, and over the release after it; unipolar. Knobs of 1 ms to 4 s, 5 ms to 8 s, a percentage, and 5 ms to 8 s |
 | `follower` | `:in` | | The audio pipe whose level it follows, its first channel; required |
 | | `:time` | 50 ms | How fast it follows; fixed when the signal is built; unipolar |
 

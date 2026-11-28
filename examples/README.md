@@ -48,7 +48,7 @@ build/bin/espresso-client --compile examples/hectodrone/main.lisp | build/bin/es
 build/bin/espresso-client examples/hectodrone main.lisp
 ```
 
-Its page is the synthesizer's panel above a reverb pedal: the detuning, which adds to the pitch bend, over a screen of the hundred oscillators' spread; the filter's cutoff with the modulation wheel down and up, and its resonance; attack, decay, sustain, and release; the volume, with a level meter; and a keyboard that plays the voices as a MIDI keyboard does. The pedal holds the reverb's mix and damping, and a footswitch that bypasses it.
+Its page is the synthesizer's panel above a reverb pedal: a screen of the hundred oscillators' spread beside the detuning, which adds to the pitch bend; the filter's cutoff with the modulation wheel down and up, and its resonance; attack, decay, sustain, and release; the volume, with a level meter; and a keyboard that plays the voices as a MIDI keyboard does. The pedal holds the reverb's mix and damping, and a footswitch that bypasses it.
 
 ## phasing
 
@@ -66,7 +66,7 @@ Two marimbas, panned to the left and the right, play one pattern of twelve sixte
 
 Under the loops, a pad holds the held notes and pulses in eighths of the left clock, swelling and fading over fourteen seconds. The marimbas and the pad share a reverb.
 
-Its page is the loops' panel above a reverb pedal: the tempo, the phasing, and the fill (the last two also on wheels A and B, the higher counting), over a screen of the twelve steps that shows each marimba's place, each step's held note, and the steps the fill has joined; the pad's cutoff, resonance, attack, and release; the breath's rate and depth; the marimbas' and pad's levels, with a level meter; and a keyboard that holds the loops' notes. The pedal holds the reverb's mix and damping, and a footswitch that silences its return.
+Its page is the loops' panel above a reverb pedal: a screen of the twelve steps that shows each marimba's place, each step's held note, and the steps the fill has joined, above the tempo, the phasing, and the fill (the last two also on wheels A and B, the higher counting); the pad's cutoff, resonance, attack, and release; the breath's rate and depth; the marimbas' and pad's levels, with a level meter; and a keyboard that holds the loops' notes. The pedal holds the reverb's mix and damping, and a footswitch that silences its return.
 
 ## organ-pad
 
@@ -92,7 +92,7 @@ The organ feeds one `chain` of a rotary speaker, a tape loop, and the standard l
 
 The two tape lengths differ, so a phrase's repeats move between the speakers and fall out of step with each other.
 
-Both pieces run on the server comfortably in a Release build. In a Debug build the organ uses most of a processor core.
+Play both pieces from a Release build: in a Debug build, the organ uses most of a processor core.
 
 ```bash
 build-release/bin/espresso-client --compile examples/phasing/main.lisp | build-release/bin/espresso-server --root examples/phasing --play -
@@ -106,7 +106,7 @@ Its page is the organ's panel above three pedals: the nine drawbars, 0 to 8 each
 
 ## straintest
 
-The piece of the v2 load test: eight instruments of eight voices, each through two effects; no device input is needed. Each instrument plays a note every quarter beat that lasts two beats, from a sequence of eight pitches of its own, so all 64 voices sound once the first two beats have passed.
+A load test of the engine: a piece heavy enough to need more than one processor core, for timing its renders and checking real-time playback across thread counts. It has eight instruments of eight voices, each through two effects, and needs no device input. Each instrument plays a note every quarter beat that lasts two beats, from a sequence of eight pitches of its own, so all 64 voices sound once the first two beats have passed.
 
 | Class | Voice |
 |---|---|
@@ -114,7 +114,7 @@ The piece of the v2 load test: eight instruments of eight voices, each through t
 | `fm-stack`, a subclass of `fm` | A modulator and a carrier for each layer, their depth set by one envelope |
 | `strings`, a subclass of `pluck` | A comb for each layer, all excited by one burst of noise, as the courses of a twelve-string guitar are struck together |
 
-Each voice is a stack of detuned layers, spread 0.3% apart about the note, as a unison voice of a polyphonic synthesizer is. `(define layers 8)` sets the number of layers, and with it the weight of the whole piece: at eight, the piece builds 2776 nodes, and one thread of an Intel Core i5-7360U cannot play it in real time. Each instrument passes two of the standard library's effects (`chorus`, `echo`, `reverb`, and `overdrive`), and the eight are mixed to the center of both channels.
+Each voice is a stack of detuned layers, spread 0.3% apart about the note, as a unison voice of a polyphonic synthesizer is. `(define layers 8)` sets the number of layers, and with it the weight of the whole piece: at eight, one thread of an Intel Core i5-7360U cannot play it in real time. Each instrument passes two of the standard library's effects (`chorus`, `echo`, `reverb`, and `overdrive`), and the eight are mixed to the center of both channels.
 
 Play it from a Release build on several threads, or render it with a profile of where its time goes:
 
@@ -132,7 +132,7 @@ build/bin/espresso-client --compile examples/straintest/straintest.lisp | build-
 scripts/straintest.sh -r 5 -s 10
 ```
 
-Its page is the load test's rig: a strip for each of the eight instruments, named by its number and instrument, with the note its sequencer plays, a light at each note, and the instrument's level before its effects; each strip sets the instrument's velocity and the wet mix of both its effects. A master meter shows the whole piece's level. The page adds two inputs and three outputs an instrument and nothing a voice, so the test's cost stays the piece's own.
+Its page is the load test's rig: a strip for each of the eight instruments, named by its number and instrument, with the note its sequencer plays, a light at each note, and the instrument's level before its effects; each strip sets the instrument's velocity and the wet mix of both its effects. A master meter shows the whole piece's level. The page adds two inputs and two outputs an instrument and nothing a voice, so the test's cost stays the piece's own.
 
 ## autoband
 
@@ -205,7 +205,7 @@ Its page is the pedal: Mix, Density, Grain, and Spread knobs, and a Hold footswi
 
 A cloud of grains over struck glass. One slow LFO moves where the grains read, another how many start each second (6 to 30); each grain is jittered in time and pitch, reversed one time in five, and spread across the stereo field.
 
-Its page is the granulator's panel: the rate, centre, and depth of the LFO that moves where the grains read, over a screen of the glass recording that shades the scanned span and marks the read head; the rate, centre, and depth of the LFO that sets how many grains start each second, with that count; each grain's length, timing and pitch jitter, and chance of reversing; and the stereo spread and the volume, with a level meter.
+Its page is the granulator's panel: a screen of the glass recording that shades the scanned span and marks the read head, above the rate, centre, and depth of the LFO that moves where the grains read; the rate, centre, and depth of the LFO that sets how many grains start each second, with that count; each grain's length, timing and pitch jitter, and chance of reversing; and the stereo spread and the volume, with a level meter.
 
 ### wavetable
 
@@ -232,7 +232,7 @@ Its page is the drone's panel: the sawtooths' pitch, the ladder filter's resonan
 
 ### weather
 
-The weather in Chicago, from Open-Meteo, polled once a minute. Two `web-in` nodes read the temperature and the wind speed from one URL and share each request. The temperature, -20 to 40 degrees Celsius, sets a sine and a triangle an octave up from 110 Hz to 880 Hz; the wind, 0 to 60 km/h, raises a pink noise from silence to about the tone's level. Both glide with a 2 s time constant.
+The weather in Chicago, from Open-Meteo, polled once a minute. Two `web-in` nodes read the temperature and the wind speed from one URL and share each request. The temperature, -20 to 40 degrees Celsius, sets a sine and a triangle an octave up from 110 Hz to 880 Hz; the wind, 0 to 60 km/h, raises a pink noise from silence to a gain of 0.8, which the tone's Volume knob does not scale. Both glide with a 2 s time constant.
 
 Its page is the synthesizer's panel: a screen of Chicago's temperature and wind as the piece glides to them, each on its scale; the tone's volume, with the pitch the temperature gives it; and meters of the wind's level and the output's level.
 
@@ -260,7 +260,7 @@ class R(h.BaseHTTPRequestHandler):
 h.HTTPServer(("127.0.0.1", 8080), R).serve_forever()'
 ```
 
-Its page is the synthesizer's panel: the three sines' pitches; the swell's rate, centre, and depth, over a screen that draws the swell's last 20 seconds; and the report, a screen of the request it posts with the loudness posted last, a light at each report, and the requests dropped, over a loudness meter.
+Its page is the synthesizer's panel: the three sines' pitches; a screen that draws the swell's last 20 seconds, above the swell's rate, centre, and depth; and the report, a screen of the request it posts with the loudness posted last, a light at each report, and the requests dropped, over a loudness meter.
 
 ### page-keys
 
@@ -275,15 +275,15 @@ With `--page-lan`, the server also prints a pairing link for a phone or tablet o
 
 ### mini-clone
 
-A monophonic synthesizer laid out after the Minimoog Model D, set from its panel at `http://localhost:8000/` and played from a MIDI keyboard: the M6 acceptance piece. Run it as `page-keys` runs, with `--root examples/mini-clone`. Its page is a custom one, its own `ui/index.html`, not drawn from the language: the panel is drawn in SVG and the page controls sit over it.
+A monophonic synthesizer laid out after the Minimoog Model D, set from its panel at `http://localhost:8000/` and played from a MIDI keyboard. Run it as `page-keys` runs, with `--root examples/mini-clone`. Its page is a custom one, its own `ui/index.html`, not drawn from the language: the panel is drawn in SVG and the page controls sit over it.
 
 | Section | Controls |
 |---|---|
 | Controllers | Tune (±2 semitones), glide, modulation mix (oscillator 3 to noise), and the glide and decay switches |
-| Oscillator bank | Three oscillators, each with a range (LO, 32', 16', 8', 4', 2') and six waveforms (triangle, triangle and sawtooth, sawtooth, square, wide and narrow pulse; on oscillator 3, reverse sawtooth in place of triangle and sawtooth); oscillators 2 and 3 tune up to a major sixth (±9 semitones) either way. Oscillator modulation sends the modulation to the first two; oscillator 3's control switch takes it off the keyboard, for a slow modulation source, and its frequency knob then sweeps three octaves either way |
-| Mixer | Volumes and switches for the three oscillators, the external input (device input 1), and white or pink noise |
-| Modifiers | A ladder filter: cutoff (±5 octaves around 440 Hz), emphasis, and amount of contour (up to 5 octaves), with filter modulation and keyboard control 1 and 2 (a third and two thirds of the keyboard's octaves); filter and loudness contours of attack, decay, and sustain |
-| Output | Volume, the main output switch, and an A-440 reference tone |
+| Oscillator bank | Three oscillators, each with a range (LO, 32', 16', 8', 4', 2') and six waveforms (triangle, triangle and sawtooth, sawtooth, square, wide and narrow pulse; on oscillator 3, reverse sawtooth in place of triangle and sawtooth); oscillators 2 and 3 tune up to a major sixth (±9 semitones) either way. Oscillator modulation sends the modulation to the first two, moving their pitch up to half an octave either way; oscillator 3's control switch takes it off the keyboard, for a slow modulation source, and its frequency knob then sweeps three octaves either way |
+| Mixer | Volumes and switches for the three oscillators, the external input (device input 1), and white or pink noise; an overload lamp that lights with the piece's output level, fully at 0.1 |
+| Modifiers | A ladder filter: cutoff (±5 octaves around 440 Hz), emphasis, and amount of contour (up to 5 octaves), with filter modulation (up to two octaves either way) and keyboard control 1 and 2 (a third and two thirds of the keyboard's octaves); filter and loudness contours of attack, decay, and sustain |
+| Output | Volume, the main output switch, and an A-440 reference tone; beside them, the power switch, which silences the output while off, and a pilot lamp lit while the page is connected and the power is on |
 | MIDI keyboard | The keys, the pitch wheel (±6 semitones, half an octave), and the mod wheel (controller 1), which scales the modulation |
 
 The contours release over their decay while the decay switch is on, and at once while it is off. Glide blends glides of 60 ms, 250 ms, and 1 s, as the knob turns. The panel sends every control's value each time it connects, so the piece starts where the panel is; until then the piece is silent.

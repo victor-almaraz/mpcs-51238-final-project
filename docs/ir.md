@@ -1,6 +1,6 @@
 # IR format
 
-The intermediate representation (IR) describes a graph of primitives: the pipes it declares and its nodes in execution order. The interpreter emits IR; the server validates it and builds a plan from it. `schema/ir.schema.json` defines the structure. The primitive tables in `include/espresso/metadata/primitiveSpec.h` define the types, parameters, and ports.
+The intermediate representation (IR) describes a graph of primitives: the pipes it declares and its nodes in execution order. The interpreter emits IR; the server validates it and builds a plan from it. `schema/ir.schema.json` defines the structure. The primitive tables in `src/metadata/primitiveSpec.cpp` define the types, parameters, and ports. The tables carry the metadata version, 0.9.0 (`include/espresso/metadata/version.h`), which the server prints at startup and with `--version`.
 
 All values are canonical units: seconds, hertz, linear amplitude, semitones, and beats.
 
@@ -40,7 +40,7 @@ A pipe declaration names a pipe and its shape:
 | `channels` | 1 to 8 | 1 | Channel count. Event pipes have one channel |
 | `feedback` | Boolean | `false` | Delays the pipe's data by one block. Audio and control pipes only |
 
-Control pipe 0 is the tempo pipe, in beats per minute. It exists without a declaration, and any node may read or write it.
+Control pipe 0 is the tempo pipe, in beats per minute. It exists without a declaration, and any node may read or write it. A declaration of it has one channel and is not a feedback pipe.
 
 Index ranges per type are set by the server's pipe table: 1024 audio pipes, 4096 control pipes, and 128 event pipes.
 
@@ -147,7 +147,20 @@ Every element but the root also takes `span` and `at`, each two whole numbers fr
 
 ## Validation
 
-The server rejects IR nested more than 64 levels deep, and IR that does not match the schema or the primitive tables, including each primitive's constraints: a `mix` has one level per input, a `sequencer` has values, an `svf` or `oscIn` has an output, an `oscOut` has an input and an address, a `pan` writes a two-channel pipe, an `adsr` with an input writes an audio pipe, a serial node's `baud` is a standard rate, a web node's `url` has its type's scheme (`ws://` or `wss://` for `webSocket`, `http://` or `https://` for the others), it has at most 8 `fields` and as many as its `value` pipe has channels, each of its `headers` is `Name: value`, and a `webOut` with a `value` input has `fields`, and a `clipPlayer`'s `bank` is lowercase letters, digits, and hyphens, played by no other `clipPlayer`. A layout's elements are checked against their kinds (Page layout); an error names the element's path, such as `layout: page > panel "Synth" > section "Filter" > knob "Q"`. Each error names the failing node and, when present, its `src` location:
+The server rejects IR nested more than 64 levels deep, and IR that does not match the schema or the primitive tables. Every required parameter is given, and a required text parameter, such as a web node's `url` or a `bufferSave`'s `file`, is not empty. Each primitive's constraints also apply:
+
+- A `mix` whose `levels` has entries has one per pipe of its `in` input.
+- A `sequencer` has values.
+- An `svf` has an output. An `oscIn`, a `serialIn`, a `webIn`, a `webStream`, and a `webSocket` have an `out` or a `value` output.
+- An `oscOut` has an `in` or a `value` input; with a `value` input, its `address` is not empty.
+- A `pan`'s output pipe has at least two channels.
+- An `adsr` with an `in` input writes an audio pipe.
+- A `wavetableOsc`'s `table-size`, and an `fft`'s `size` and `overlap`, are powers of two.
+- A serial node's `baud` is a standard rate: 9600, 19200, 38400, 57600, 115200, 230400, 460800, or 921600.
+- A web node's `url` has its type's scheme: `ws://` or `wss://` for `webSocket`, `http://` or `https://` for the others. It has at most 8 `fields`, and, with a `value` pipe, one per channel of that pipe. Each of its `headers` is `Name: value`. A `webOut` with a `value` input has `fields`.
+- A `clipPlayer`'s `bank` is lowercase letters, digits, and hyphens, and no other `clipPlayer` plays it.
+
+A layout's elements are checked against their kinds (Page layout); an error names the element's path, such as `layout: page > panel "Synth" > section "Filter" > knob "Q"`. Each error names the failing node and, when present, its `src` location:
 
 ```text
 main.lisp:3:5: node main.lisp/piece/sine#0: parameter freq is -5; expected 0 to 100000

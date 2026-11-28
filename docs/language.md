@@ -21,7 +21,7 @@ A piece is a Lisp file whose entry piece, defined with `defpiece`, builds a grap
 
 The editor plays `main.lisp`; without one, it plays the file being edited. The piece named `main` is built unless another entry is given (`espresso-client --compile FILE --entry NAME`).
 
-A project is a directory of files. `import` paths are relative to the project root, with `.lisp` implied: `(import "util/scales")` loads `util/scales.lisp`. Paths that begin with `std/` name the standard library, which is compiled into the client and which no project file replaces; `docs/library.md` describes it. The editor imports its open buffers, saved or not; `espresso-client --compile` reads files under `--root`, by default the compiled file's directory. `module` and `import` are top-level forms.
+A project is a directory of files. `import` paths are relative to the project root, with `.lisp` implied, and neither begin with `/` nor contain `..`: `(import "util/scales")` loads `util/scales.lisp`. Paths that begin with `std/` name the standard library, which is compiled into the client and which no project file replaces; `docs/library.md` describes it. The editor imports its open buffers, saved or not; `espresso-client --compile` reads files under `--root`, by default the compiled file's directory. `module` and `import` are top-level forms.
 
 A file with an `export` clause exports the names it lists; a file without one exports every top-level binding it defines, and none that it imports. `:only` binds the listed names, each of which must be exported. `:as` binds each name as `prefix/name`. Each file is evaluated once per compilation, at its first import; later imports bind its exports again. An import cycle is an error that lists the files in the cycle. Classes and generic functions are global, whichever file defines them.
 
@@ -107,7 +107,7 @@ A parameter accepts a plain number in its canonical unit or a quantity of its di
 | Builtin | Meaning |
 |---|---|
 | `+ - * /` | Arithmetic with dimensions; on pipes inside a mapper, generators |
-| `= < > <= >=` | Comparisons of numbers of the same dimension; `=` also compares symbols, keywords, and strings |
+| `= < > <= >=` | Comparisons of numbers of the same dimension; `=` also takes values of any other kind: equal symbols, keywords, and strings, and the same boolean, pipe, buffer, instance, or vector, are equal |
 | `not` | Logical negation |
 | `list` | A vector of its arguments |
 | `(map f vector)` | `f` applied to each element, in order; a vector of the results |
@@ -115,10 +115,11 @@ A parameter accepts a plain number in its canonical unit or a quantity of its di
 | `(nth vector i)` | Element `i`, from 0; an index outside the vector is an error |
 | `(length vector)` | The number of elements; `nil` has none |
 | `(channel-count v)` | The channel count of pipe or buffer `v` |
-| `(control-range v)` | The range of the page control whose pipe is `v`, as `[min max scale step]`: `min` and `max` canonical plain numbers, `scale` `:linear`, `:exp`, or `:db`, and `step` 0 or the spacing of its values; a switch runs 0 to 1 in steps of 1, a select over its options, a knob of `:steps` over its steps; a pipe that is no control's is an error |
+| `(control-range v [what])` | The range of the page control whose pipe is `v`, as `[min max scale step]`: `min` and `max` canonical plain numbers, `scale` `:linear`, `:exp`, or `:db`, and `step` 0 or the spacing of its values; a toggle, footswitch, or button runs 0 to 1 in steps of 1, a select over its options, a knob of `:steps` or `:angles` over its steps; a pipe that is no control's is an error, which names the slot `what` when it is given |
+| `(show-modulation v low high)` | Sets the `mod` arc (Page controls) of the knob whose pipe is `v` to span `low` to `high`, plain numbers in its travel; a second call widens the arc, and a control without a `mod` attribute ignores the call |
 | `(pipe? v)` | Whether `v` is a pipe or a mapper's output |
 | `(error part ...)` | Stops the compile with the parts joined, strings as they are and other values shown, at the call |
-| `(seal instance)`, `(sealed? instance)` | Marks an instance's nodes built, and asks whether they are; a page draws no sealed instance's controls |
+| `(seal instance)`, `(sealed? instance)` | Marks an instance's nodes built, and asks whether they are; drawing a sealed instance's controls on a page is an error |
 | `(route instance in out)` | Records that the instance reads pipe `in` (or `#f`) and writes pipe `out`, for the tabs of a page; an instance no group drew records nothing. `effect`'s `process` and `instrument`'s `play` call it |
 | `(string-append s ...)` | The strings joined in order, such as an address built from parts: `(string-append "/cable/" name)`; with no arguments, the empty string |
 | `(unit-value q 'unit)` | Quantity `q` as a plain number in `unit`: `(unit-value 250ms 's)` is 0.25 |
@@ -134,9 +135,9 @@ An index or a count, such as the `i` of `nth`, the `n` of `range`, and the `:cha
 
 ```lisp
 (pipe :audio)                ; one channel
-(pipe :audio :channels 2)
+(pipe :audio :channels 2)    ; 1 to 8 channels
 (pipe :control)
-(pipe :event)
+(pipe :event)                ; one channel, never a feedback pipe
 (pipe :audio :feedback #t)   ; delays its data by one block
 ```
 
@@ -151,7 +152,7 @@ Choice parameters take keywords (`:mode :low`); text parameters take strings (`:
 
 A `sequencer` moves to its next value at each event on `:in` other than a note-off, writes the current value to the control pipe on `:out`, and emits it as a value event on `:events`. `:order` is `:forward` (the default), `:backward`, `:ping-pong` (to the last value and back, without repeating either end), `:random` (drawn from a generator seeded from the project seed and the node ID), or `:once`. `:forward` and `:backward` wrap at the ends. `:once` stops on the last value: later events leave `:out` at the last value and emit nothing on `:events`, so the sequence plays one time. A node that adopts a sequencer's state across a plan swap keeps its position, including the end of a `:once` sequence.
 
-A `clip-player` plays the MIDI files of a clip bank as notes on `:out`. The bank, `:bank`, is a folder of the project, `clips/<bank>/`, whose files `1.mid` to `64.mid`, or with a title after the number, `3 walking bass.mid`, are its slots, from 1; the engine reads a file when a plan that plays its bank is loaded, and again when a page saves one (Pages). A file is a Standard MIDI File of format 0 or 1: its tracks merged, a quarter note a beat, its tempo and meter events ignored, chunks of other kinds skipped. A file that does not read is reported once, and read again each time the bank's files are read, until it does. `:select` is the slot playing, from 0, or −1 for none, usually a page control's pipe; `:slots` (8 by default) is how many it has. A change of `:select` waits for the next grid line, a multiple of `:grid` beats (16 by default, four bars of four) on the beat clock: the clip playing plays until then, its notes held there end, and the chosen clip starts on the line. A `clip-player` new to the running plan does not wait for a grid line: it plays the slot `:select` holds in its first block at once, from the place the clip would have reached had it started on the last grid line, so it keeps time with the clips already playing. When that slot's file has not been read yet, it starts the same way once it is, through plan swaps that keep its state; a choice of another slot before then waits for the grid. A clip loops at its length rounded up to whole bars of the meter it started in, from the line it started on, so a change of meter takes effect at its next start. A slot without a clip plays nothing, as −1 does. The control pipe on `:playing` holds the slot playing, or −1, and the one on `:queued` the slot it changes to at the next grid line, which is the slot playing when no change waits. One `clip-player` plays a bank. A `clip-player` of the same bank that adopts one's state across a plan swap keeps its clip, its place in it, and the notes it holds; one of another bank adopts nothing.
+A `clip-player` plays the MIDI files of a clip bank as notes on `:out`. The bank, `:bank`, is a folder of the project, `clips/<bank>/`, whose files `1.mid` to `64.mid`, or with a title after the number, `3 walking bass.mid`, are its slots, from 1; the engine reads a file when a plan that plays its bank is loaded, and again when a page saves one (Pages). A file is a Standard MIDI File of format 0 or 1: its tracks merged, a quarter note a beat, its tempo and meter events ignored, chunks of other kinds skipped. A file that does not read is reported once, and read again each time the bank's files are read, until it does. `:select` is the slot playing, from 0, or −1 for none, a constant or a control pipe such as a page control's; `:slots` (8 by default) is how many it has. A change of `:select` waits for the next grid line, a multiple of `:grid` beats (16 by default, four bars of four) on the beat clock: the clip playing plays until then, its notes held there end, and the chosen clip starts on the line. A `clip-player` new to the running plan does not wait for a grid line: it plays the slot `:select` holds in its first block at once, from the place the clip would have reached had it started on the last grid line, so it keeps time with the clips already playing. When that slot's file has not been read yet, it starts the same way once it is, through plan swaps that keep its state; a choice of another slot before then waits for the grid. A clip loops at its length rounded up to whole bars of the meter it started in, from the line it started on, so a change of meter takes effect at its next start. A slot without a clip plays nothing, as −1 does. The control pipe on `:playing` holds the slot playing, or −1, and the one on `:queued` the slot it changes to at the next grid line, which is the slot playing when no change waits. One `clip-player` plays a bank. A `clip-player` of the same bank that adopts one's state across a plan swap keeps its clip, its place in it, and the notes it holds; one of another bank adopts nothing.
 
 ```lisp
 (clip-player :bank "bass" :select slot :grid 16beat :out notes :playing now :queued next)
@@ -270,13 +271,13 @@ A device that is missing is opened when it appears; one that goes away is closed
 | `web-socket` | `:url` (`ws://` or `wss://`; required), `:headers`, `:fields`, `:hello` (text), `:value`, `:out` |
 | `web-out` | `:url` (`http://` or `https://`; required), `:headers`, `:timeout`, `:method` (`:post`, `:put`, or `:get`), `:fields` (text list), `:in` (events; required), `:value` (control), `:dropped` (out, control) |
 
-`web-in` requests `:url` when its plan becomes active and then every `:every` seconds of wall-clock time, counted from the start of the previous request; a beat value is an error. A request still running when the next is due skips that one. Nodes that request one URL with the same headers and interval share each request. `web-stream` holds a `text/event-stream` response open and reads each message, or only messages of `:event` when it is given. `web-socket` holds a WebSocket open, sends `:hello` after each connection opens when it is given, and reads each text message. A stream or socket that closes or fails connects again after 3 s, or after a stream's own retry time, doubling while failures repeat, up to 60 s; a stream sends the last event ID it received.
+`web-in` requests `:url` when its plan becomes active and then every `:every` seconds of wall-clock time, counted from the start of the previous request; a beat value is an error. It skips a request that falls due while the previous one runs. Nodes that request one URL with the same headers and interval share each request. `web-stream` holds a `text/event-stream` response open and reads each message, or only messages of `:event` when it is given. `web-socket` holds a WebSocket open, sends `:hello` after each connection opens when it is given, and reads each text message. A stream or socket that closes or fails connects again after 3 s, or after a stream's own retry time, doubling while failures repeat, up to 60 s; a stream sends the last event ID it received.
 
 Each response or message is a JSON document of at most 1 MiB. Field *i* of `:fields`, a JSON Pointer such as `/main/temp` or `/data/0/value`, sets channel *i* of `:value`; with no fields, the whole document is read as one number. A number is read as it is, `true` and `false` as 1 and 0, and a string that holds a number as that number. A field that is absent or holds anything else leaves its channel unchanged. Each document read also sends a value event on `:out` carrying field 0, unless field 0 is absent. At most 8 fields are read; given fields must match `:value`'s channels.
 
 `web-out` sends one request at each event on `:in`: a JSON object of `:fields` and the channels of `:value` (`{"temp": 21.5, "level": 0.25}`), or, with no `:value`, of `value` and the event's number. With `:method :get` the same pairs go in the query string. The engine does not limit how often a piece sends; a piece chooses, for example with `metro` or `threshold`. Up to 64 requests wait to be sent; one more is dropped, counted, and shown on `:dropped`. A failed request is counted and not sent again.
 
-A header is written `"Name: value"`. Header values are part of the IR, which `espresso-client --compile` prints and the client sends to the server over the local socket; keep API keys in project files that stay out of version control.
+A header is written `"Name: value"`. Header values are part of the IR, which `espresso-client --compile` prints and the client sends to the server over the local socket, so an API key in a header is as readable as the IR and the project file that writes it.
 
 ```lisp
 (let ((now (pipe :control :channels 2)))
@@ -326,7 +327,7 @@ espresso.onOpen(() => espresso.send("/cutoff", knob.value));
 
 A page whose stream or WebSocket opens receives first the last message the playing piece's `osc-out` nodes sent to each of their addresses on the page port, so it shows the values sent before it connected. The `/clips` requests answer only for a bank a `clip-player` of the playing piece plays, and 404 for any other. Values are kept for the addresses of the pieces playing, the one swapping in included; when a piece stops, the values at addresses the next piece does not use are dropped, and those at addresses it uses are sent until it sends its own. The server answers only requests addressed to `127.0.0.1:P` or `localhost:P`, takes posts, clips, and WebSockets only from its own pages, and holds up to 16 connections, closing an HTTP connection that no bytes reach or leave for 10 s. Messages over 1024 bytes, bodies over 64 KiB (1 MiB for a clip), and WebSocket messages over 64 KiB are refused, a refused body read to its end, up to 16 MiB and while its bytes keep arriving (2 s apart at most), so its sender reads the refusal; a page that reads too slowly loses its own messages, and no other page's.
 
-`espresso-server --page-lan` also serves pages to other machines on the network, such as a phone. The server then prints a pairing link for each of the machine's addresses, `http://192.168.1.20:8000/?pair=<token>`; a browser on another machine opens it once, and the server answers that browser from then on. The token changes each time the server starts. The page port speaks plain HTTP, so anyone on the network can read its traffic; use `--page-lan` only on a network you trust.
+`espresso-server --page-lan` also serves pages to other machines on the network, such as a phone. The server then prints a pairing link for each of the machine's addresses, `http://192.168.1.20:8000/?pair=<token>`; a browser on another machine opens it once, and the server answers that browser from then on. The token changes each time the server starts. The page port speaks plain HTTP without encryption, so `--page-lan` exposes its traffic to every machine on the local network.
 
 `osc-notes` turns OSC messages into note events, so a keyboard on a page, or any OSC controller, plays an instrument through `voice-split`:
 
@@ -359,7 +360,7 @@ A piece declares its page's controls in the language. Each control adds the `osc
 | `knob`, `slider` | A control pipe | `es-knob`, `es-slider` |
 | `toggle` | A control pipe, 1 when on and 0 when off | `es-toggle` |
 | `button` | A control pipe, 1 while held | `es-button` |
-| `select` | A control pipe, the index of the chosen `:options` entry | `es-select` |
+| `select` | A control pipe, the index of the chosen entry of `:options`, which it requires | `es-select` |
 | `xy` | A control pipe of two channels, x and y | `es-xy` |
 | `keys` | An event pipe of notes, as `osc-notes` makes them | `es-keys` |
 | `clips` | An event pipe of notes: those of the `clip-player` it makes for its bank, which plays the slot the page chooses | `es-clips` |
@@ -371,7 +372,7 @@ A piece declares its page's controls in the language. Each control adds the `osc
 | `screen` | An area of its `:span` with no address, which the project's `ui/script.js` draws in, finding it by its label | `es-screen` |
 | `tab` | A tab of the page, with its label first, holding panels, synth panels, and pedalboards | `es-tab` |
 
-Each takes its label first, a string, when it has one; a display takes the pipe it shows next, and a group the elements it holds. Keyword arguments follow: the element's attributes in Page controls and Page layout, written as keywords (`:scale :exp`, `:orientation :vertical`, `:size :big`, `:unit :percent` for `%`), with `:initial` for an element's starting value, and `:span` and `:at` as vectors of two numbers (`:span [4 4]`).
+Each takes its label first, a string, when it has one; a display takes the pipe it shows next, and a group the elements it holds. Keyword arguments follow: the element's attributes in Page controls and Page layout, written as keywords (`:scale :exp`, `:orientation :vertical`, `:size :big`, `:unit :percent` for `%`, and a `meter`'s `:hold` as a time, `1s` by default, in place of the attribute's milliseconds), with `:initial` for an element's starting value, and `:span` and `:at` as vectors of two numbers (`:span [4 4]`).
 
 - **Ranges.** `:min`, `:max`, and `:initial` take numbers in any unit and hold them in the canonical one; those written with units are of one kind. A frequency shows in hertz on an exponential scale, a time in seconds, and a level in decibels on a decibel scale, unless `:unit` and `:scale` say otherwise. `:min` is 0 and `:max` 1 by default.
 - **Starting values.** A control without `:initial` starts at `:min`. Its pipe holds the same value until the page sends one, so the piece plays as written without the page. A pad's `:initial` is one number for both axes.
@@ -391,7 +392,7 @@ A drawn page is restyled and extended by the project's own files, in order of ho
 1. `:theme` and `:accent` on `page`.
 2. `ui/style.css`, which the drawn page loads after its own style: the `--es-*` properties and `::part()` rules of Page controls restyle every control on it.
 3. `ui/script.js`, which it loads after its own script, for what the language does not draw. Each group and control on a drawn page carries its `label`, so a script finds its place by it: `document.querySelector('es-section[label="Sweep"]').prepend(screen)` sets a screen of its own, with a `span` in units, above the section's controls, and setting a control's `unit` attribute to a unit the script adds to `espressoUI.units` shows the control's value in it.
-4. `espresso-client --page FILE > ui/index.html`, or Play → Save Page as ui/index.html in the GUI editor, writes the drawn page into the project, without the drawn page's reload. `ui/index.html` is then the project's own page, served in place of the drawn one and edited by hand; the piece's layout no longer draws it. A compile that fails writes nothing, and the empty file a shell's redirect then leaves counts as no page.
+4. `espresso-client --page FILE > ui/index.html`, or Play → Save Page as ui/index.html in the GUI editor, writes the drawn page into the project, without the drawn page's reload. `ui/index.html` is then the project's own page, served in place of the drawn one and edited by hand; changes to the piece's layout leave it as it is. A compile that fails writes nothing, and the empty file a shell's redirect then leaves counts as no page.
 
 ## Page controls
 
@@ -505,7 +506,7 @@ Three kits draw the panels of instruments and effects around controls and sectio
 | `--es-cheek`, `--es-face` | Walnut, dark grey | A synth panel's cheeks and face |
 | `--es-paint`, `--es-ink` | Set by the pedalboard; `#3f8fb8` and `#0d2a38` alone | A pedal's enclosure and its text |
 | `--es-footswitch-size` | `64px` | A footswitch's diameter |
-| `--es-drawbar-length` | `160px`; 88 px in a section | A drawbar's track |
+| `--es-drawbar-length` | `160px`; 82 px in a section | A drawbar's track |
 | `--es-drawbar-tip`, `--es-drawbar-rod` | `#f2efe6`, `#8a8780` | A drawbar's tip, and the part of its rod pulled out |
 
 `espressoUI.valueAt(p, range)`, `espressoUI.positionOf(v, range)`, `espressoUI.fit(v, range)`, and `espressoUI.format(v, unit)` give a page the controls' own mapping, for a range `{ min, max, scale, step }`.
@@ -539,13 +540,15 @@ A page lays out its controls on a grid of one unit, `--es-u`, 24 pixels by defau
 | `es-keys` | One unit per white key × 5 |
 | `es-footswitch` | 3 × 3 |
 | `es-drawbar` | 2 × 6 |
+| `es-screen` | 3 × 2 on a drawn page |
+| `es-clips` | 6 plus 4 per slot × 2 on a drawn page |
 
 A control sits centred in its footprint; any other child fills one unit unless its `span` says otherwise.
 
 | Attribute | On | Meaning |
 |---|---|---|
 | `label` | `es-section`, `es-panel` | A section's title, one unit high above its grid, the section at least as wide as it in whole units; the group's name to assistive technology |
-| `columns` | `es-section` | Rows of that many units, filled in turn. Without it, children flow in one row, and a child that fits under the one before, within the section's height, stacks under it |
+| `columns` | `es-section` | Rows of that many units, filled in turn; `:columns` in the language takes 1 to 64. Without it, children flow in one row, and a child that fits under the one before, within the section's height, stacks under it |
 | `span` | A child of `es-section` | Its width and height in units, as `span="9 3"` |
 | `at` | A child of `es-section` | Its column and row, from 1, as `at="4 1"` |
 | `flow` | `es-panel` | `row` (the default), sections side by side; `column`, sections stacked |
@@ -569,7 +572,7 @@ A mapper transforms a pipe with an expression:
 
 The result is used wherever a pipe is read. The compiler turns each operation into a generator node; the function may use the operations `+ - * / neg abs exp log sin cos tanh floor round pow min max quantize clamp scale scale-exp`. The output is an audio pipe when an input is audio, otherwise a control pipe. Outside a mapper, these operations take numbers only.
 
-Constants follow the dimension rules of each operation, inside and outside a mapper. `min`, `max`, `clamp`, `quantize`, `scale`, and `scale-exp` take arguments of one dimension; `+` and `-` do not take levels; `neg` and `abs` do not take levels; `exp`, `log`, `sin`, `cos`, `tanh`, and the exponent of `pow` take plain numbers. Beat values are not accepted. Division by a constant zero is an error.
+Constants follow the dimension rules of each operation, inside and outside a mapper: `min`, `max`, `clamp`, `quantize`, `scale`, and `scale-exp` take arguments of one dimension; `neg` and `abs` do not take levels; `exp`, `log`, `sin`, `cos`, `tanh`, and both operands of `pow` take plain numbers. Inside a mapper, `+` and `-` also refuse levels, as decibels added to a pipe's value are ambiguous, and `(* x -6db)` scales by a level instead. A mapper takes no beat values. Division by a constant zero is an error.
 
 `scale` onto a range of levels interpolates in decibels and converts the result with a `db-to-amp` node: `(scale x 0 1 -40db 0db)` gives -20 dB for an `x` of 0.5. A level of 0 has no decibel value, so such a range needs a floor, such as `-60db`. `scale-exp` onto levels interpolates the amplitudes geometrically, which is the same curve.
 
@@ -594,7 +597,7 @@ Constants follow the dimension rules of each operation, inside and outside a map
 
 | Form | Meaning |
 |---|---|
-| `(defclass name (superclasses...) ((slot options...)...))` | Defines a class; a slot is a name or a name with options |
+| `(defclass name (superclasses...) [((slot options...)...)])` | Defines a class; a slot is a name or a name with options: `:initarg`, `:initform`, `:accessor`, and `:control` |
 | `(make class :initarg value...)` | A new instance |
 | `(slot-value object 'slot)` | Reads a slot |
 | `(defgeneric name (params...))` | Declares a generic function dispatching on its required parameters |
@@ -602,7 +605,7 @@ Constants follow the dimension rules of each operation, inside and outside a map
 | `(call-next-method [args...])` | In a method, calls the next method, with this method's arguments when none are given |
 | `(next-method-p)` | In a method, true when there is a next method |
 
-Slot options are `:initarg :keyword`, `:initform expression`, and `:accessor name`. An accessor is a generic function of one argument that reads the slot. `make` sets each slot from its initarg, or else by evaluating its initform, or else to `nil`; initforms are evaluated at each `make`. A class inherits the slots of its superclasses: the initform of the most specific class that gives one applies, and every class's initargs set the slot. `:control call` names the page control a pedal or a synth panel draws the slot as (Pages): a call of `knob`, `slider`, `toggle`, or another control, such as `(knob :min 500hz :max 8khz)`, evaluated where its `defclass` is written when the pedal is drawn. It takes the slot's name as its label unless it gives one and the slot's value as its `:initial` unless it gives one, and the slot then holds the control's pipe; a slot that holds a pipe is not drawn. The most specific class that gives a `:control` decides it, as for initforms.
+Slot options are `:initarg :keyword`, `:initform expression`, `:accessor name`, and `:control call`. An accessor is a generic function of one argument that reads the slot. `make` sets each slot from its initarg, or else by evaluating its initform, or else to `nil`; initforms are evaluated at each `make`. A class inherits the slots of its superclasses: the initform of the most specific class that gives one applies, and every class's initargs set the slot. `:control call` names the page control a pedal or a synth panel draws the slot as (Pages): a call of `knob`, `slider`, `toggle`, or another control, such as `(knob :min 500hz :max 8khz)`, evaluated where its `defclass` is written when the pedal is drawn. It takes the slot's name, with hyphens as spaces and its first letter capitalized (`max-time` as `"Max time"`), as its label unless it gives one and the slot's value as its `:initial` unless it gives one, and the slot then holds the control's pipe; a slot that holds a pipe is not drawn. The most specific class that gives a `:control` decides it, as for initforms.
 
 Classes and generic functions are global. A class must be defined before its subclasses and before the methods that name it. Redefining a class affects the instances made afterwards.
 
@@ -616,13 +619,13 @@ A call to a generic function is one step of the instance path, named for the gen
 
 Each node's ID is its file, the entry piece, and its instance path: the named function calls from the piece to the primitive call, each written `callee@line:column#n`. `n` counts calls from the same place under the same parent, so the eight voices built by one `map` are numbered 0 to 7. Calls to anonymous functions add no step.
 
-The reserved argument `:key` replaces the count: `(voice f out :key 'bass)`. Keys keep each node's ID, and so its state across swaps, when the items of a `map` are reordered. A keyed call to an anonymous function adds a step named `fn`. Two calls to the same function under the same parent with the same key are an error. A key is a symbol, string, keyword, or integer. `:key` on a builtin other than a primitive, or on a call made outside a piece build, is an error.
+The reserved argument `:key` replaces the count: `(voice f out :key 'bass)`. Keys keep each node's ID, and so its state across swaps, when the items of a `map` are reordered. A keyed call to an anonymous function adds a step named `fn`. Two calls to the same function under the same parent with the same key are an error. A key is a symbol, string, keyword, or integer. `:key` names what a call makes, so it is accepted on calls of functions, generic functions, primitives, `mapper`, `buffer`, and the page's functions, and on operations on pipes inside a mapper; on any other builtin, or on a call made outside a piece build, it is an error.
 
 A keyword argument given twice in one call, including `:key` and the options of `pipe`, is an error at its second occurrence.
 
 ## Errors
 
-Errors stop the compilation and leave the running piece unchanged. Each names the file, line, and column of the value or innermost form at fault, and the calls that led to it. Parameter values are checked at the call against their dimension, range (in the unit written), and the pipe types they accept; ports are checked for their pipe types and required bindings.
+Errors stop the compilation and leave the running piece unchanged. Each names the file, line, and column of the value or innermost form at fault, and the calls that led to it. Parameter values are checked at the call against their dimension, range, and the pipe types they accept, a value out of range being reported in hertz, seconds (milliseconds below 1 s), decibels, semitones, or beats, whatever unit it was written in; ports are checked for their pipe types and required bindings.
 
 ```text
 main.lisp:2:19: parameter :freq expects a frequency, got a time
@@ -632,15 +635,15 @@ Evaluation nests at most 2000 levels and runs at most 5,000,000 steps. A program
 
 ## Warnings
 
-A piece that compiles may still carry warnings. They are reported with their location, in the editor console and on standard error, and do not stop the piece:
+A piece that compiles can carry warnings. They are reported with their location, in the editor console and on standard error, and do not stop the piece:
 
 | Warning | When |
 |---|---|
-| A loop grows without bound | The gains along a loop through one or more audio feedback pipes multiply to 1 or more; parallel paths add. A loop may pass through inputs or through parameters bound to audio pipes. `gain` amounts, `adsr` gains, and `mix` levels (per input) count; adders, delays, pans, and the `b` operand of `subtract`, `min`, and `max` count as 1. With a node of unknown gain on the loop, such as a filter or a gain bound to a pipe, the warning appears only above 1, and says "may" |
+| A loop grows without bound | The gains along a loop through one or more audio feedback pipes multiply to 1 or more; parallel paths add. A loop may pass through inputs or through parameters bound to audio pipes. `gain` amounts, `adsr` gains, and `mix` levels (per input) count; `add`, `subtract`, `min`, `max`, `neg`, `abs`, `delay-line`, `pan`, and `crossfade` pass their inputs at 1, as does the `b` operand of `subtract`, `min`, and `max`. With a node of unknown gain on the loop, such as a filter, a `comb`, or a gain bound to a pipe, the warning appears only above 1, and says "may" |
 | A gain is very large | A constant `gain`, `adsr` gain, or `mix` level on an audio path exceeds +24 dB |
 | A frequency aliases | A constant frequency parameter exceeds half the sample rate |
 | A buffer has two writers | Two nodes write one buffer, each recording over the other |
 
 ## Not supported
 
-Beat values in mappers, `play` in source files, text, and mouse and keyboard input to sketches.
+Beat values in mappers (Mappers).

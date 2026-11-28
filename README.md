@@ -42,13 +42,14 @@ The build produces `build/bin/espresso-server` and `build/bin/espresso-client`. 
 |---|---|---|
 | `ESPRESSO_BUILD_SERVER` | `ON` | Builds the server app and downloads JUCE |
 | `ESPRESSO_BUILD_CLIENT` | `ON` | Builds the client app |
+| `ESPRESSO_BUILD_EDITOR` | The value of `ESPRESSO_BUILD_CLIENT` | Prepares the GUI editor: fetches its web packages and places the client and the server in `src/apps/editor/src-tauri/binaries/` (`src/apps/editor/README.md`) |
 | `ESPRESSO_BUILD_TESTS` | `ON` | Builds the Catch2 suite |
 | `ESPRESSO_WARNINGS_AS_ERRORS` | `OFF` | Adds `-Werror` |
 | `ESPRESSO_COVERAGE` | `OFF` | Instruments the project's targets for LLVM source-based coverage (Clang only) and adds the `coverage-badge` target |
 
 ### macOS
 
-Linux is the release platform; macOS builds and runs the same three programs from the build directory, without an application bundle or code signing.
+Linux is the release platform; macOS builds the server and the client and runs them from the build directory, without an application bundle or code signing.
 
 Requirements:
 
@@ -94,7 +95,9 @@ The editor opens `PROJECT_DIR` (default: the current directory) and its `main.li
   :fade            50ms
   :quant           :none    ; :none, :beat, or :bar
   :rebuild-on-save #f
-  :theme           :terminal)
+  :theme           :terminal
+  :file-list-width 24       ; columns, 1 to 1000
+  :console-height  8)       ; rows, 1 to 1000
 ```
 
 ### Themes
@@ -109,11 +112,11 @@ The editor opens `PROJECT_DIR` (default: the current directory) and its `main.li
 | Nord | `:nord` |
 | High Contrast | `:high-contrast` |
 
-Every theme assigns colors to the same roles: window, secondary text, rules, raised surfaces, fields, accent, destructive actions, selection, control states, status, and the ten syntax categories. Truecolor themes keep at least 4.5:1 contrast for body text and 3:1 for secondary text, syntax, and status colors (7:1 in High Contrast), and fall back to 256 or 16 colors on terminals without truecolor support. The theme can be changed in Preferences; the change applies immediately.
+Every theme assigns colors to the same roles: window, secondary text, rules, raised surfaces, fields, accent, destructive actions, selection, control states, status, and the ten syntax categories. Truecolor themes keep at least 4.5:1 contrast for body text and 3:1 for secondary text, syntax, and status colors, with 7:1 for body text and syntax in High Contrast, and fall back to 256 or 16 colors on terminals without truecolor support. The theme can be changed in Preferences; the change applies immediately.
 
 Controls show their state. A control under the pointer is drawn in its hover color, and a control held down by the pointer in its pressed color. A divider under the pointer or being dragged is drawn in the accent color. In a menu, the item under the pointer takes the focus. A control that has nothing to act on, such as Stop before a plan plays, or Undo with no change to undo, is drawn in the secondary color and ignores presses. Its tooltip still names it.
 
-The × button in the header bar quits; in the `emacs` scheme, so does `C-x C-c`. In every scheme, F5 plays, F6 stops, and F8 evaluates the form before the cursor.
+The × button in the header bar quits, as does each scheme's quit key: `C-x C-c` in `emacs`, `C-q` in `cua`, `:q` in `vim`, and `C-x` in `nano`. In every scheme, F5 plays, F6 stops, and F8 evaluates the form before the cursor.
 
 Play compiles the project's `main.lisp` with unsaved edits (without one, the file being edited), submits the result to the server, and reports compile errors in the console; clicking an error moves the cursor to it. A console message longer than the pane's width wraps onto further rows, indented under its first, and the wheel scrolls the console by rows. Evaluate Form compiles the project the same way. A failed compilation leaves the running piece unchanged.
 
@@ -125,7 +128,7 @@ The status bar shows the server connection, the tempo of the server's beat clock
 build/bin/espresso-client --compile FILE.lisp [--root DIR] [--entry NAME] [--seed N]
 ```
 
-Compiles the piece named `NAME` (default `main`) in `FILE.lisp` and writes its IR to standard output; errors go to standard error as `file:line:column: message`, and the exit status is 1. `--seed N` takes a whole number from 0 to 2⁶⁴ − 1; any other value, or an unknown option, exits with status 2. Warnings about likely audio hazards (loops that grow, very large gains, aliasing frequencies) go to standard error and do not change the exit status. `docs/language.md` describes the supported language, and `docs/library.md` the standard library of instruments and effects. Imports resolve against `--root`, by default FILE's directory. The IR can be piped to the server:
+Compiles a piece in `FILE.lisp` and writes its IR to standard output. The piece and the seed are those the root directory's `project.lisp` names, by default `main` and 0; `--entry NAME` and `--seed N` override them. Errors go to standard error as `file:line:column: message`, and the exit status is 1. `--seed N` takes a whole number from 0 to 2⁶⁴ − 1; any other value, or an unknown option, exits with status 2. Warnings about likely audio hazards (loops that grow, very large gains, aliasing frequencies) go to standard error and do not change the exit status. `docs/language.md` describes the supported language, and `docs/library.md` the standard library of instruments and effects. Imports resolve against `--root`, by default FILE's directory. The IR can be piped to the server:
 
 ```bash
 build/bin/espresso-client --compile examples/wavetable/wavetable.lisp | build/bin/espresso-server --root examples/wavetable --play -
@@ -137,7 +140,7 @@ build/bin/espresso-client --compile examples/wavetable/wavetable.lisp | build/bi
 build/bin/espresso-client --serve [--port N]
 ```
 
-Runs the client without the terminal editor, for a graphical editor that starts it as a child process. The client reads JSON-RPC 2.0 requests from standard input and writes responses and notifications to standard output, one message per line, and reaches the server on `127.0.0.1:N` as the terminal editor does. The methods are `hello`, `project.open`, `file.read`, `file.write`, `file.create` (an empty file, and the folders above it), `file.rename`, `run.play`, `run.eval`, `run.stop`, `server.connect`, `highlight`, `language`, and `shutdown`; the notifications are `console` and `status`. Paths are relative to the project root that `project.open` names. After `shutdown`, or at the end of standard input, the client finishes the run requests already read and exits with status 0.
+Runs the client without the terminal editor, for a graphical editor that starts it as a child process. The client reads JSON-RPC 2.0 requests from standard input and writes responses and notifications to standard output, one message per line, and reaches the server on `127.0.0.1:N` as the terminal editor does. The methods are `hello`, `project.open`, `project.files`, `file.read`, `file.stat`, `file.write`, `file.create` (an empty file, and the folders above it), `file.rename`, `run.play`, `run.eval`, `run.stop`, `server.connect`, `page.render`, `highlight`, `language`, and `shutdown`; the notifications are `console` and `status`. Paths are relative to the project root that `project.open` names. After `shutdown`, or at the end of standard input, the client finishes the run requests already read and exits with status 0.
 
 ## Examples
 
@@ -145,9 +148,10 @@ Each example is a folder in `examples/`. A piece is `NAME/NAME.lisp`, with sampl
 
 | Example | Input | Description |
 |---|---|---|
+| `autoband` | Its page | A bass, a pad, a lead, and a drum machine playing loops of MIDI files, chosen from a matrix of clips on its page, each through an effect chain of its own |
 | `edits` | Wikimedia's stream of recent changes | A plucked note for each edit to a Wikimedia wiki, its velocity set by the page's length |
 | `firehose` | Bluesky's Jetstream | A short FM note for each public Bluesky post, on a pitch and length drawn at random |
-| `freeze-pedal` | Audio input 1, sustain pedal | A granular delay that the sustain pedal freezes on what it heard just before the pedal went down |
+| `freeze-pedal` | Audio input 1, sustain pedal | A granular delay that the sustain pedal freezes on what it heard immediately before the pedal went down |
 | `grain-cloud` | None | A cloud of grains over struck glass, jittered in time and pitch and spread across the stereo field |
 | `hectodrone` | Any MIDI keyboard | Four voices of one hundred sawtooths, their detuning on the pitch-bend wheel and their filter on the modulation wheel |
 | `mini-clone` | Its page, a MIDI keyboard, audio input 1 | A monophonic synthesizer laid out after the Minimoog Model D, set from a panel in a web page |
@@ -159,7 +163,7 @@ Each example is a folder in `examples/`. A piece is `NAME/NAME.lisp`, with sampl
 | `sampler-keys` | Any MIDI keyboard | One recording of middle C played across the keyboard by eight voices |
 | `serial-knob` | A potentiometer on a USB serial board | A drone whose filter cutoff follows the potentiometer |
 | `spectral-audioscape` | None | A short FM piano arpeggio looped from a buffer through an eight-band spectral delay, a spectral freeze, and a reverb |
-| `straintest` | None | The piece of the v2 load test: eight instruments of eight voices, each through two effects, each voice a stack of eight detuned layers |
+| `straintest` | None | The engine's load test: eight instruments of eight voices, each through two effects, each voice a stack of eight detuned layers |
 | `wavetable` | None | Three wavetable oscillators a fifth and an octave apart, swept from a sine table to a square and back |
 | `weather` | Open-Meteo, polled once a minute | A tone pitched by Chicago's temperature, and a noise raised by its wind |
 
@@ -183,17 +187,17 @@ build/bin/espresso-server --list-devices
 | `--no-audio` | Off | Runs the engine on a timer instead of a device. The timer's thread asks for real-time scheduling, as a device's audio thread has; on Linux this needs an rtprio limit (the `audio` group's, on most distributions), and the server reports when it is refused |
 | `--verbose` | Off | Logs every message except `/counters`, and the socket receive buffer size |
 | `--play IR_FILE` | None | Plays an IR file at startup as plan −1, until a client swaps in another plan. `-` reads standard input |
-| `--root DIR` | `.` | Project root that buffer files resolve against |
+| `--root DIR` | `.` | Project root that buffer files resolve against and that buffer saves are written under |
 | `--buffer-memory MB` | `1024` | Bound on the memory of the buffers pieces declare, in MiB; a plan that needs more is refused |
 | `--threads N` | The physical cores the process may run on, at most 16 | Threads that run each block, the audio thread included, from 1 to 64. With more than one, workers run the plan's independent nodes beside the audio thread. The output is the same at every count. The server warns when N exceeds the processors the process may use |
 | `--worker-spin US` | `50` | How long a worker with no node to run spins before it sleeps, in microseconds, from 0 to 1000000. A longer spin wakes the worker sooner for the next block and uses more processor time |
-| `--page-lan` | Off | Serves a project's pages on every network interface, not only `127.0.0.1`, to browsers that open the pairing link the server prints. Plain HTTP: use it only on a network you trust |
+| `--page-lan` | Off | Serves a project's pages on every network interface, not only `127.0.0.1`, to browsers that open the pairing link the server prints. Plain HTTP: use it only on a trusted network |
 
 On Linux the server opens its audio device through JACK: PipeWire's JACK interface (`pipewire-jack`) or a JACK server, which runs the device callback on a real-time thread. When no JACK server lists a device, the server reports it and opens the device through ALSA, whose callback thread runs without real-time priority. `--list-devices` lists the devices of each type, and the line the server prints at startup names the type and the device it opened.
 
 Buffers load WAV and AIFF (8-, 16-, 24-, and 32-bit integer, 32- and 64-bit float), FLAC, MP3, and Ogg Vorbis files, resampled to the server's sample rate. The server keeps the 16 files it loaded last, so resubmitting a piece decodes only files that changed.
 
-Numeric options take decimal numbers in the stated ranges; `--port`, `--block-size`, `--inputs`, `--outputs`, `--buffer-memory`, `--threads`, and `--worker-spin` take whole numbers. Any other value exits with status 2. The first SIGINT or SIGTERM stops the server in order; a second one during shutdown exits at once with status 130.
+Numeric options take decimal numbers in these ranges: `--port` 1 to 65535, `--sample-rate` 8000 to 384000, `--block-size` 16 to 8192, `--inputs` and `--outputs` 0 to 64, `--seconds` 0 to 86400, `--buffer-memory` 1 to 1048576, `--threads` 1 to 64, and `--worker-spin` 0 to 1000000. All but `--sample-rate` and `--seconds` take whole numbers. Any other value, or an unknown option, exits with status 2. The first SIGINT or SIGTERM stops the server in order; a second one during shutdown exits at once with status 130.
 
 Every `audioOut` limits its signal to its `:ceiling` (default full scale) and mutes itself if it receives infinite or NaN samples, reporting the node in the editor console. MIDI inputs are opened as they appear; `midiIn` and `midiOut` select devices by a case-insensitive substring of the device name. `oscIn` and `oscOut` use UDP ports on `127.0.0.1`.
 

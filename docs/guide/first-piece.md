@@ -31,7 +31,7 @@ The piece builds a graph of four primitives connected by two pipes. The [languag
 
 ## Playing
 
-In the GUI editor, Play, in the toolbar and the Play menu, compiles the project and plays it: Shift+Ctrl+Space in every key scheme. Stop (Ctrl+. in the CUA scheme) stops it. The editor starts a server of its own.
+In the GUI editor, Play, in the top bar and the Play menu, compiles the project and plays it: Ctrl+Shift+Space in every key scheme. Stop (Ctrl+. in the CUA scheme) stops it. The editor starts a server of its own.
 
 The terminal editor connects to a server started first, in a terminal of its own:
 

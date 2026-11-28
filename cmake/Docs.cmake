@@ -1,4 +1,4 @@
-# Two documentation targets:
+# Three documentation targets:
 #
 # - `docs` builds the API reference with Doxygen: HTML into
 #   build/docs/api/, which is not committed, with docs/api.md as its main
@@ -11,11 +11,16 @@
 #   fails on any warning.
 #
 # - `site` assembles the web site in build/site/: the landing page of
-#   site/, the editor's fonts, and the manual under docs/.
+#   site/ and the manual under docs/.
 #
 # Sphinx and its extensions are tools, not dependencies: install the
 # versions docs/requirements.txt pins, and point SPHINX_EXECUTABLE at their
 # sphinx-build when it is not on the PATH.
+
+# A target that only reports why it does nothing.
+function(espresso_skipped_target name reason)
+    add_custom_target(${name} COMMAND ${CMAKE_COMMAND} -E echo "${reason}; ${name} target skipped" VERBATIM)
+endfunction()
 
 find_package(Doxygen)
 find_program(SPHINX_EXECUTABLE NAMES sphinx-build DOC "sphinx-build with myst-parser and breathe installed")
@@ -42,9 +47,7 @@ if(DOXYGEN_FOUND)
     doxygen_add_docs(docs "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/docs/api.md"
         COMMENT "Building the API reference into ${PROJECT_BINARY_DIR}/docs/api with Doxygen")
 else()
-    add_custom_target(docs
-        COMMAND ${CMAKE_COMMAND} -E echo "Doxygen not found; docs target skipped"
-        VERBATIM)
+    espresso_skipped_target(docs "Doxygen not found")
 endif()
 
 if(DOXYGEN_FOUND AND SPHINX_EXECUTABLE)
@@ -69,38 +72,17 @@ if(DOXYGEN_FOUND AND SPHINX_EXECUTABLE)
         COMMENT "Building the manual into ${PROJECT_BINARY_DIR}/docs/html with Sphinx"
         VERBATIM)
     add_dependencies(manual manual-xml)
-else()
-    add_custom_target(manual
-        COMMAND ${CMAKE_COMMAND} -E echo "Doxygen or sphinx-build not found; manual target skipped"
-        VERBATIM)
-endif()
 
-# The web site: site/'s landing page at the root, the GUI editor's fonts
-# (fetched with the editor's web packages) beside it, and the manual under
-# docs/.
-if(TARGET manual-xml)
-    set(ESPRESSO_SITE_DIR "${PROJECT_BINARY_DIR}/site")
-    # The fonts come with the editor's web packages; without the editor, the
-    # page's style falls back to the system's fonts.
-    set(ESPRESSO_EDITOR_FONTS "${PROJECT_SOURCE_DIR}/src/apps/editor/web/vendor/fonts")
-    set(fonts "")
-    if(ESPRESSO_BUILD_EDITOR)
-        set(fonts
-            COMMAND "${CMAKE_COMMAND}" -E make_directory "${ESPRESSO_SITE_DIR}/fonts"
-            COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${ESPRESSO_EDITOR_FONTS}/NotoSans.ttf"
-                    "${ESPRESSO_EDITOR_FONTS}/NotoSans-OFL.txt" "${ESPRESSO_EDITOR_FONTS}/JetBrainsMono.ttf"
-                    "${ESPRESSO_EDITOR_FONTS}/JetBrainsMono-OFL.txt" "${ESPRESSO_SITE_DIR}/fonts")
-    endif()
+    # The web site: site/'s landing page at the root, the manual under docs/.
+    set(site "${PROJECT_BINARY_DIR}/site")
     add_custom_target(site
-        COMMAND "${CMAKE_COMMAND}" -E rm -rf "${ESPRESSO_SITE_DIR}"
-        COMMAND "${CMAKE_COMMAND}" -E copy_directory "${PROJECT_SOURCE_DIR}/site" "${ESPRESSO_SITE_DIR}"
-        COMMAND "${CMAKE_COMMAND}" -E copy_directory "${PROJECT_BINARY_DIR}/docs/html" "${ESPRESSO_SITE_DIR}/docs"
-        ${fonts}
-        COMMENT "Assembling the web site in ${ESPRESSO_SITE_DIR}"
+        COMMAND "${CMAKE_COMMAND}" -E rm -rf "${site}"
+        COMMAND "${CMAKE_COMMAND}" -E copy_directory "${PROJECT_SOURCE_DIR}/site" "${site}"
+        COMMAND "${CMAKE_COMMAND}" -E copy_directory "${PROJECT_BINARY_DIR}/docs/html" "${site}/docs"
+        COMMENT "Assembling the web site in ${site}"
         VERBATIM)
     add_dependencies(site manual)
 else()
-    add_custom_target(site
-        COMMAND ${CMAKE_COMMAND} -E echo "Doxygen or sphinx-build not found; site target skipped"
-        VERBATIM)
+    espresso_skipped_target(manual "Doxygen or sphinx-build not found")
+    espresso_skipped_target(site "Doxygen or sphinx-build not found")
 endif()

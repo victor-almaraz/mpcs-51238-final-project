@@ -1,15 +1,15 @@
 /* The landing page, in the GUI editor's Carbon palette and type
    (src/apps/editor/web/editor.css). */
 
+/* The editor's fonts, subset to Latin (site/fonts/, each with its OFL). */
 @font-face {
   font-family: "Noto Sans";
-  src: url("fonts/NotoSans.ttf") format("truetype");
+  src: url("fonts/NotoSans.woff2") format("woff2");
   font-weight: 100 900;
-  font-stretch: 62.5% 100%;
 }
 @font-face {
   font-family: "JetBrains Mono";
-  src: url("fonts/JetBrainsMono.ttf") format("truetype");
+  src: url("fonts/JetBrainsMono.woff2") format("woff2");
   font-weight: 100 800;
 }
 
@@ -28,11 +28,11 @@
   --accentHover: #7f71cc;
   --accentText: #40c8be;
   --codeSpecialForm: #a591f5;
-  --codeKeyword: #40c8be;
+  --codeKeyword: var(--accentText);
   --codeCall: #6eaafa;
   --codeString: #96cd82;
   --codeNumber: #eba564;
-  --codeComment: #8c8c8c;
+  --codeComment: var(--secondary);
   --mono: "JetBrains Mono", ui-monospace, monospace;
   --ui: "Noto Sans", system-ui, sans-serif;
   --bar: 36px;
@@ -64,7 +64,7 @@ img { display: block; max-width: 100%; height: auto; }
 .top nav a { color: var(--text); }
 .top nav a:hover { color: var(--bright); text-decoration: none; }
 
-main, footer .inner { width: min(var(--page), 100% - 2 * var(--inset) * 2); margin: 0 auto; }
+main, footer .inner { width: min(var(--page), 100% - 4 * var(--inset)); margin: 0 auto; }
 
 /* The opening: the claim, the buttons, and the editor. */
 .hero { display: grid; gap: calc(var(--gap) * 4); padding: 72px 0 48px; }

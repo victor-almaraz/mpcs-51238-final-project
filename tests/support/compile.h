@@ -22,6 +22,17 @@
 
 namespace support {
 
+/// A loader of the files of @p files, path to text, for
+/// compileOptions::load; @p files outlives it.
+template <typename Map>
+interpreter::fileLoader mapLoader(const Map& files) {
+    return [&files](const std::string& path) {
+        const auto it = files.find(path);
+        return interpreter::loadedFile{.text = it == files.end() ? std::nullopt : std::optional(it->second),
+                                       .error = {}};
+    };
+}
+
 /// The graph of the project in folder @p root: its main.lisp compiled with
 /// its project file, when it has one, and imports from the folder, as
 /// `espresso-client --compile` does; fails the test when it does not

@@ -68,7 +68,7 @@ cmake --build build --target manual
 
 The `docs` target needs Doxygen; the `manual` and `site` targets need Doxygen and `sphinx-build`. Without the tools it needs, a target reports that it is skipped. `docs/index.md` is the manual's contents, and `docs/conf.py` its configuration.
 
-The web site is the landing page of `site/`, in the GUI editor's style, with the manual under `docs/`. The `site` target builds the manual and assembles the site, with the editor's fonts, in `build/site/`, which a static host serves as it is:
+The web site is the landing page of `site/`, in the GUI editor's style, with the manual under `docs/`. The `site` target builds the manual and assembles the site in `build/site/`, which a static host serves as it is:
 
 ```bash
 cmake --build build --target site

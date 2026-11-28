@@ -28,11 +28,7 @@ using files = std::map<std::string, std::string, std::less<>>;
 // Compiles main.lisp of the project @p project, path to contents, with
 // @p options.
 interpreter::compileResult project(const files& project, interpreter::compileOptions options = {}) {
-    options.load = [&project](const std::string& path) {
-        const auto it = project.find(path);
-        return interpreter::loadedFile{.text = it == project.end() ? std::nullopt : std::optional(it->second),
-                                       .error = {}};
-    };
+    options.load = support::mapLoader(project);
     return interpreter::compile(project.at("main.lisp"), "main.lisp", options);
 }
 

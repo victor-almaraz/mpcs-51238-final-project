@@ -1,23 +1,26 @@
 // The pieces the documentation shows compile: every `lisp` code block of
-// docs/ that defines a piece (`defpiece`) and elides nothing (`...`). A
-// block of several files marks each with a comment line `;; NAME.lisp`
-// before its text; the piece is in the last, or in main.lisp.
+// docs/, and every code sample of the landing page, that defines a piece
+// (`defpiece`) and elides nothing (`...`). A block of several files marks
+// each with a comment line `;; NAME.lisp` before its text; the piece is in
+// the last, or in main.lisp.
 
 #include <catch2/catch_test_macros.hpp>
 
 #include <algorithm>
-#include <cstddef>
 #include <filesystem>
+#include <iterator>
 #include <map>
 #include <optional>
 #include <regex>
 #include <sstream>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <espresso/interpreter/compiler.h>
 #include <espresso/interpreter/project.h>
 
+#include "support/compile.h"
 #include "support/files.h"
 
 namespace {
@@ -62,48 +65,65 @@ std::vector<snippet> lispBlocks() {
     return out;
 }
 
-// The block's files by name: one main.lisp, or one file a `;; NAME.lisp` line opens.
-std::map<std::string, std::string> filesOf(const std::string& text, std::string& entry) {
-    static const std::regex marker(R"(^;; ([\w./-]+\.lisp)$)");
+// The code samples of the landing page, site/index.html: each
+// `<pre class="code">`, its highlighting spans removed.
+std::vector<snippet> siteBlocks() {
+    static const std::regex block(R"(<pre class="code">([\s\S]*?)</pre>)");
+    static const std::regex tag("<[^>]+>");
+    const std::string page = support::readText(fs::path(ESPRESSO_SOURCE_DIR) / "site" / "index.html");
+    std::vector<snippet> out;
+    for (auto it = std::sregex_iterator(page.begin(), page.end(), block); it != std::sregex_iterator();
+         ++it) {
+        std::string text = std::regex_replace((*it)[1].str(), tag, "");
+        for (const auto& [entity, character] :
+             {std::pair{"&lt;", "<"}, {"&gt;", ">"}, {"&quot;", "\""}, {"&amp;", "&"}}) {
+            text = std::regex_replace(text, std::regex(entity), character);
+        }
+        out.push_back({.where = "site/index.html", .text = text});
+    }
+    return out;
+}
+
+// A block's files by name, and the file that holds its piece: main.lisp
+// when it does, or else the file the last `;; NAME.lisp` line opens.
+struct pieceFiles {
     std::map<std::string, std::string> files;
+    std::string entry = "main.lisp";
+};
+
+pieceFiles filesOf(const std::string& text) {
+    static const std::regex marker(R"(^;; ([\w./-]+\.lisp)$)");
+    pieceFiles out;
     std::istringstream in(text);
     std::string line;
-    std::string current = "main.lisp";
-    entry = current;
+    std::string current = out.entry;
     std::smatch m;
     while (std::getline(in, line)) {
         if (std::regex_match(line, m, marker)) {
             current = m[1].str();
-            entry = current;
             continue;
         }
-        files[current] += line + "\n";
+        out.files[current] += line + "\n";
     }
-    if (files.contains("main.lisp") && files.size() > 1 &&
-        files["main.lisp"].find("(defpiece") != std::string::npos) {
-        entry = "main.lisp";
-    }
-    return files;
+    const auto main = out.files.find("main.lisp");
+    if (main == out.files.end() || main->second.find("(defpiece") == std::string::npos) out.entry = current;
+    return out;
 }
 
 }  // namespace
 
 TEST_CASE("every piece the documentation shows compiles") {
     int compiled = 0;
-    for (const snippet& s : lispBlocks()) {
+    std::vector<snippet> blocks = lispBlocks();
+    std::ranges::move(siteBlocks(), std::back_inserter(blocks));
+    for (const snippet& s : blocks) {
         if (s.text.find("(defpiece") == std::string::npos || s.text.find("...") != std::string::npos)
             continue;
         DYNAMIC_SECTION(s.where) {
-            std::string entry;
-            const auto files = filesOf(s.text, entry);
-            const auto load = [&files](const std::string& path) {
-                const auto it = files.find(path);
-                return it == files.end() ? interpreter::loadedFile{.text = std::nullopt, .error = {}}
-                                         : interpreter::loadedFile{.text = it->second, .error = {}};
-            };
+            const auto [files, entry] = filesOf(s.text);
             // A page port, so that pieces with controls and chains compile.
-            const auto result =
-                interpreter::compileProject(files.at(entry), entry, {}, "(project :page-port 8000)", load);
+            const auto result = interpreter::compileProject(
+                files.at(entry), entry, {}, "(project :page-port 8000)", support::mapLoader(files));
             INFO(result.piece.text());
             CHECK(result.piece.ok());
         }

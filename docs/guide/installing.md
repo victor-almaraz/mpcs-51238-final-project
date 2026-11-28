@@ -56,6 +56,13 @@ The first configure downloads the libraries, and the first build compiles them. 
 
 Options are set at configure time, for example `cmake -B build -S . -DESPRESSO_BUILD_TESTS=OFF`.
 
+The build type is Debug unless `CMAKE_BUILD_TYPE` names another. A Debug engine is compiled without optimization, so heavy pieces play live from a Release build, in a tree of its own:
+
+```bash
+cmake -B build-release -S . -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build-release
+```
+
 ## The GUI editor
 
 The GUI editor is a Tauri application over the client. It needs, beyond the C++ build:

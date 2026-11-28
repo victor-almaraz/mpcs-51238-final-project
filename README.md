@@ -35,6 +35,7 @@ The build produces `build/bin/espresso-server` and `build/bin/espresso-client`. 
 | [Playing](docs/guide/playing.md) | The compiler, the server live and without devices, seeds, and offline renders |
 | [Inputs and outputs](docs/guide/io.md) | Audio and MIDI devices, OSC, serial devices, web data, and pages: what each needs from the machine |
 | [Performance](docs/guide/performance.md) | Threads, the Linux settings that decide whether blocks meet their deadlines, the load, and the load test |
+| [Troubleshooting](docs/guide/troubleshooting.md) | Symptoms, the messages that accompany them, and their remedies |
 | [Language reference](docs/language.md) | The Lisp dialect |
 | [Standard library](docs/library.md) | Voices, instruments, effects, and modulators |
 | [IR format](docs/ir.md) | The intermediate representation the server plays |

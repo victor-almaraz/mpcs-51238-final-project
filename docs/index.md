@@ -13,6 +13,7 @@ guide/terminal-editor
 guide/playing
 guide/io
 guide/performance
+guide/troubleshooting
 ```
 
 ```{toctree}

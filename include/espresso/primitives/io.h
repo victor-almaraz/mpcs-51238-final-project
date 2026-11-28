@@ -230,7 +230,9 @@ public:
     /// Node ID of the node reading an input port or writing an output
     /// port; empty for MIDI and OSC outputs.
     const std::string& owner() const noexcept { return owner_; }
-    /// MIDI device name pattern; empty matches every device.
+    /// The device pattern: for a MIDI port, a name pattern for matches(),
+    /// which an empty one passes for every device; for a serial port, the
+    /// pattern the serial bridge resolves (serialPort). Empty otherwise.
     const std::string& device() const noexcept { return device_; }
     /// UDP port, for OSC ports.
     std::uint16_t udpPort() const noexcept { return udpPort_; }
@@ -244,7 +246,7 @@ public:
     /// True while the port's plan is running.
     bool active() const noexcept { return active_.load(std::memory_order_seq_cst); }
 
-    /// A delivery in progress (hub thread), from before it reads whether
+    /// A delivery in progress (I/O thread), from before it reads whether
     /// the port is active until after it pushes. The audio thread may
     /// deactivate the port in between; closed() tells it when no delivery
     /// can still push.
@@ -577,9 +579,12 @@ public:
     /// Faults reported so far.
     std::uint64_t faults() const noexcept { return faultCount_.load(std::memory_order_relaxed); }
 
-    /// Counts a dropped packet (full queue). Real-time safe.
+    /// Counts a dropped message: one a full queue refused, one a node
+    /// discards as malformed, not finite, or too large, a port a node
+    /// cannot carry across a swap, or a save trigger while a save is
+    /// pending. Real-time safe.
     void countDrop() noexcept ESPRESSO_NONBLOCKING { drops_.fetch_add(1, std::memory_order_relaxed); }
-    /// Packets dropped by full queues.
+    /// Messages dropped so far (countDrop()).
     std::uint64_t drops() const noexcept { return drops_.load(std::memory_order_relaxed); }
 
     /// True when the pattern @p device selects @p deviceName: empty

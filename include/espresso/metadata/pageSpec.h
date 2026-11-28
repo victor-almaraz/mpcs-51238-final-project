@@ -1,8 +1,9 @@
 /// @file
 /// The kinds of a page's layout (`dsl-ui.md` §7.1): groups, which hold
-/// other kinds, and controls, each bound to an OSC address on the page
-/// port. The table is data: the IR validator checks a layout against it,
-/// and the interpreter and the page renderer read it.
+/// other kinds; controls and displays, each bound to an OSC address on the
+/// page port; and spaces, which have no address. The table is data: the IR
+/// validator checks a layout against it, and the interpreter and the page
+/// renderer read it.
 
 #pragma once
 
@@ -27,7 +28,7 @@ enum class pageRole : std::uint8_t {
 struct pageKindSpec {
     /// The kind, as the IR names it: `section`, `knob`.
     std::string_view kind;
-    /// Group, control, or display.
+    /// Group, control, display, or space.
     pageRole role = pageRole::group;
     /// The custom element that draws it: `es-section`, `es-knob`.
     std::string_view element;
@@ -46,7 +47,7 @@ struct pageKindSpec {
 };
 
 /// Every kind of layout element: the groups, then the controls, then the
-/// displays. A group's first kind that holds an element is the one an
+/// displays, then the spaces. A group's first kind that holds an element is the one an
 /// element it cannot hold is wrapped in.
 std::span<const pageKindSpec> pageKinds() noexcept;
 

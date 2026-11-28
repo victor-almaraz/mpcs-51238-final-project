@@ -97,8 +97,10 @@ int data1(const event& e) noexcept ESPRESSO_NONBLOCKING;
 int data2(const event& e) noexcept ESPRESSO_NONBLOCKING;
 /// Pitch bend value, 0 to 16383.
 int bendValue(const event& e) noexcept ESPRESSO_NONBLOCKING;
-/// The number carried by a trigger or value event; for MIDI events, the
-/// second data byte scaled to 0–1.
+/// The number carried by a trigger or value event. For MIDI events, a
+/// value scaled to 0–1: a pitch bend's 14-bit value, a program change's or
+/// channel pressure's first data byte, and the other types' second data
+/// byte. 0 for other events.
 float number(const event& e) noexcept ESPRESSO_NONBLOCKING;
 /// The pool location of an OSC event's message.
 poolRef oscData(const event& e) noexcept ESPRESSO_NONBLOCKING;
@@ -117,7 +119,10 @@ int toMidi(const event& e, std::array<std::uint8_t, 3>& out) noexcept ESPRESSO_N
 /// True when the OSC message's address is @p address. Real-time safe.
 bool oscAddressIs(std::span<const std::byte> message, std::string_view address) noexcept ESPRESSO_NONBLOCKING;
 
-/// The first numeric argument (`i`, `f`, `h`, or `d`) of an OSC message.
+/// The first numeric argument (`i`, `f`, `h`, or `d`) of an OSC message,
+/// past any string (`s`) and blob (`b`) arguments before it. Nothing when
+/// an argument of another type comes first, when the message has no
+/// numeric argument, or when it is malformed.
 std::optional<float> oscFirstNumber(std::span<const std::byte> message) noexcept ESPRESSO_NONBLOCKING;
 
 /// The first `out.size()` arguments of an OSC message, as numbers, into

@@ -6,11 +6,11 @@
 /// `define`, `defpiece`, `let` (bindings are sequential), `fn`, `do`,
 /// `if`, `cond`, `set!`, `quote`, `module`, `import`, and `pipe`; the
 /// object system (`defclass`, `defgeneric`, `defmethod`, `make`); the
-/// builtins `+ - * /` with dimensions, `= < > <= >=`, `not`, `list`,
-/// `map`, `range`, `tempo`, `mapper`, `slot-value`, and the mapper
-/// operations; and calls to every primitive in the `metadata` tables,
-/// named in kebab-case. Beat values for time parameters and in mappers
-/// are not supported yet.
+/// builtins that `evaluator::installBuiltins` (evaluator.cpp) and
+/// `evaluator::installPageBuiltins` (page.cpp) bind, listed by
+/// builtinNames(); and calls to every primitive in the `metadata` tables,
+/// named in kebab-case. A beat value for a time parameter compiles to a
+/// `beatsToSeconds` node; a beat value in a mapper is an error.
 
 #pragma once
 
@@ -100,8 +100,8 @@ struct compileResult {
     std::optional<metadata::graphSpec> graph;
     /// Errors; empty on success.
     std::vector<compileError> errors;
-    /// Likely audio hazards in a graph that compiled: loops that grow,
-    /// very large gains, frequencies above half the sample rate.
+    /// Likely audio hazards in a graph that compiled, as ir::hazards()
+    /// finds them.
     std::vector<compileError> warnings;
 
     /// True when compilation succeeded.

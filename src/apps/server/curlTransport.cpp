@@ -199,7 +199,7 @@ void curlTransport::finish(id which, int result) {
     const auto code = static_cast<CURLcode>(result);
     // An opened socket's handle stays in the multi handle: libcurl reads and
     // writes a connect-only connection only while it is added
-    // (CURLOPT_CONNECT_ONLY). Everything else leaves it now.
+    // (CURLOPT_CONNECT_ONLY). Every other handle leaves it here.
     if (!t.socket() || code != CURLE_OK) detach(t);
     if (t.stopped) return;
     std::string error;

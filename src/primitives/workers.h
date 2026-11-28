@@ -108,8 +108,9 @@ inline void cpuRelax() noexcept ESPRESSO_NONBLOCKING {
 /// left. std::counting_semaphore, which on Linux waits on a futex, except
 /// on Apple platforms, whose libc++ waits through std::atomic::wait by
 /// polling with sleeps of up to half the time already waited (8 ms past
-/// 128 ms): a worker asleep for 60 ms woke 28 ms after its release. There
-/// it is libdispatch's semaphore, which wakes a waiter in microseconds.
+/// 128 ms), so a worker asleep for 60 ms wakes 28 ms after its release.
+/// There it is libdispatch's semaphore, which wakes a waiter in
+/// microseconds.
 class sleepSemaphore {
 public:
     /// No tokens. Throws std::system_error when the system has no

@@ -32,7 +32,7 @@ namespace {
 // buffer between threads; std::system_category() does not.
 std::string errorText(int error) { return std::system_category().message(error); }
 
-// A message for an entry that exists already, as GNOME Builder words it.
+// A message for an entry that exists already, in GNOME Builder's wording.
 std::string existsMessage(const fs::path& path) {
     return "A file or folder named \u201c" + path.filename().string() + "\u201d already exists";
 }

@@ -40,9 +40,9 @@ namespace tui {
 // run controls, the document title, and a main menu at the end; a
 // sidebar and a console pane beside the content, with their headings on
 // the same rows as the tab bar; popovers for menus; centered alert,
-// preferences, shortcuts, and about dialogs. Colors are the terminal's
-// named palette, so the terminal theme (light, dark, high contrast)
-// applies.
+// preferences, shortcuts, and about dialogs. Colors come from the active
+// theme; the default theme uses the terminal's named palette, so the
+// terminal's own theme (light, dark, high contrast) applies.
 
 namespace {
 
@@ -889,7 +889,8 @@ Element app::renderMessageLine() {
 }
 
 // An alert dialog: heading, body, and responses with Cancel first, the
-// destructive response in red, and the default response highlighted.
+// destructive response in the destructive color, and the default response
+// highlighted.
 Element app::renderDialog(const dialog& d) {
     const palette S{theme_.get()};
     clipTo_ = region::dialog;

@@ -34,6 +34,7 @@ struct position {
 /// cheap (`tui.md` §5.1).
 class gapBuffer {
 public:
+    /// An empty buffer.
     gapBuffer() = default;
     /// Creates a buffer holding @p text.
     explicit gapBuffer(std::string_view text);
@@ -82,6 +83,7 @@ struct undoLimits {
 /// (`tui.md` §3.1, §5.4).
 class buffer {
 public:
+    /// An empty, unnamed buffer.
     buffer() = default;
 
     /// Creates a buffer holding @p text, associated with @p path.
@@ -162,8 +164,12 @@ public:
     /// @}
 
     /// @name Edits
-    /// Each edit sets the dirty flag (`tui.md` §5.3). Edits that would
-    /// change nothing return false and leave the buffer untouched.
+    /// Each edit sets the dirty flag (`tui.md` §5.3). When there is nothing
+    /// to change, deleteBackward(), deleteForward(), and joinLines() return
+    /// false, deleteSelection() and killLine() return empty text, and
+    /// replace() leaves the buffer untouched. insert() of empty text with no
+    /// selection counts as an edit: it sets the dirty flag, advances
+    /// version(), clears the mark, and records an undo step.
     /// @{
 
     /// Inserts @p text at the cursor, replacing the selection if any.

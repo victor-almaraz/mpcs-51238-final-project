@@ -210,9 +210,9 @@ float readBuffer(const sampleBuffer& b, int c, double pos, interpolation mode, b
 
 // As readBuffer(), for a level @p b made with the other edge rule than
 // @p past, whose frames near its ends, made with @p past, @p ends holds
-// (levelSet::ends). Not inlined: inside readAt(), it made readAt() too
-// large to inline into the readers, and their every read paid a call
-// (measured: freeze-pedal 2.7% slower).
+// (levelSet::ends). Not inlined: inlined into readAt(), it makes readAt()
+// too large to inline into the readers, so every read pays a call, and the
+// freeze-pedal example renders 2.7% slower.
 [[gnu::noinline]] float readLevel(const sampleBuffer& b, const sampleBuffer& ends, int c, double pos,
                                   interpolation mode, bufferEdge past,
                                   double step) noexcept ESPRESSO_NONBLOCKING {

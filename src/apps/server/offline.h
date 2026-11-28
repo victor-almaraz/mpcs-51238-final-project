@@ -33,8 +33,8 @@ std::vector<std::vector<float>> renderOffline(primitives::engine& audio,
                                               std::span<const std::vector<float>> inputs = {});
 
 /// A profile of @p plan after it played @p seconds of audio with the
-/// engine profiling (`threads.md` §11): the nodes' time and its share of
-/// the audio's length, by primitive type, most first, then the slowest
+/// engine profiling (`--profile`): the nodes' time and its share of the
+/// audio's length, by primitive type, most first, then the slowest
 /// nodes. One line per row.
 std::string profileReport(const primitives::plan& plan, double seconds);
 

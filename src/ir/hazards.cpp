@@ -1,5 +1,6 @@
 // Likely audio hazards in a valid, sorted graph: loops that grow, very
-// large gains, and frequencies above half the sample rate.
+// large gains, frequencies above half the sample rate, and buffers with
+// more than one writer.
 
 #include <algorithm>
 #include <array>

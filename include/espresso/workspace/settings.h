@@ -13,10 +13,11 @@
 
 namespace workspace {
 
-/// Key binding scheme (`tui.md` §8.2).
+/// Key binding scheme (`tui.md` §8.2): Emacs, CUA, Vim, or nano.
 enum class keyScheme : std::uint8_t { emacs, cua, vim, nano };
 
-/// Swap quantization grid (`grammar.md` §4.5).
+/// Swap quantization grid (`grammar.md` §4.5): `none` swaps at once,
+/// `beat` at the next beat, `bar` at the next bar.
 enum class quantization : std::uint8_t { none, beat, bar };
 
 /// Settings name of @p scheme, such as "emacs".

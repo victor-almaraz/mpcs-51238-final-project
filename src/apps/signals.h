@@ -1,5 +1,5 @@
-// SIGINT and SIGTERM handling for the servers, on POSIX signals only (no
-// JUCE), so both servers stop the same way (lessons.md, "Background jobs
+// SIGINT and SIGTERM handling for the server, on POSIX signals only (no
+// JUCE), so it is tested without devices (lessons.md, "Background jobs
 // start with SIGINT ignored").
 
 #pragma once
@@ -27,7 +27,7 @@ namespace apps {
 class signalMask {
 public:
     // Throws std::system_error when a disposition or the mask cannot be
-    // set: the servers would then not stop on SIGINT or SIGTERM.
+    // set: the server would then not stop on SIGINT or SIGTERM.
     signalMask() {
         for (const int sig : {SIGINT, SIGTERM}) {
             if (std::signal(sig, SIG_DFL) == SIG_ERR)

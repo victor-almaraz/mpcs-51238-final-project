@@ -58,7 +58,8 @@ struct projectOptionsResult {
 };
 
 /// The options for compiling a piece of a project: @p options with the
-/// entry piece, seed, and page port that the project file declares.
+/// name, entry piece, seed, and page port of the project file's
+/// projectSpec, where a member the file omits takes projectSpec's default.
 /// @p projectText is the text of the project file, read by readProject();
 /// nothing when the project has none, which leaves @p options as they
 /// are. Never throws on bad input.
@@ -85,8 +86,8 @@ struct projectCompileResult {
 
 /// Compiles @p source, the text of @p file, a project's entry file by path
 /// relative to the project root, as compile() does: with @p options given
-/// the entry piece, seed, and page port that @p projectText, the project
-/// file's text, declares (projectOptions()), then @p overrides, and with
+/// the name, entry piece, seed, and page port of @p projectText, the
+/// project file's text (projectOptions()), then @p overrides, and with
 /// @p load as the loader of the files it imports (compileOptions::load).
 /// Never throws on bad input.
 projectCompileResult compileProject(std::string_view source, std::string_view file, compileOptions options,

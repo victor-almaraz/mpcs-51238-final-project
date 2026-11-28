@@ -62,7 +62,7 @@ struct engineOptions {
     /// Bound on the memory of live buffers, in bytes (`samples.md` §5.6).
     std::size_t bufferMemory = bufferPool::defaultLimit;
     /// Times each node of the active plan into `plan::seconds`: two clock
-    /// reads a node a block, for offline profiles (`threads.md` §11).
+    /// reads a node a block, for offline profiles.
     bool profile = false;
     /// The threads that run a block, the audio thread included
     /// (`threads.md` §7): 1 runs every node on the audio thread in plan
@@ -91,11 +91,13 @@ struct engineOptions {
 struct engineCounters {
     /// Blocks whose processing exceeded their period.
     std::uint64_t missedDeadlines = 0;
-    /// Packets and control values dropped by full queues.
+    /// Messages dropped: control values refused by the full control
+    /// queue (setControl()), and the drops ioHub::drops() counts.
     std::uint64_t drops = 0;
     /// Event pipe overflows.
     std::uint64_t overflows = 0;
-    /// Audio thread load, from 0 to 1, smoothed.
+    /// Audio thread load, smoothed: the share of each callback's period
+    /// spent processing, above 1 when callbacks overrun their periods.
     float load = 0.0f;
     /// The active plan, or 0.
     std::int32_t activePlan = 0;
@@ -137,9 +139,9 @@ class workerPool;
 // NOLINTNEXTLINE(clang-analyzer-optin.performance.Padding): cache-line separation
 class engine {
 public:
-    /// Allocates the pipe table and queues. Throws std::invalid_argument
-    /// when the block size is not positive or the sample rate is not a
-    /// positive finite number.
+    /// Allocates the pipe table and queues, and starts the workers. Throws
+    /// std::invalid_argument when an option is out of range: the block
+    /// size, sample rate, thread count, worker spin, or a schedule minimum.
     explicit engine(engineOptions options = {});
     /// Frees every plan. The audio thread must have stopped.
     ~engine();
@@ -172,10 +174,10 @@ public:
     /// Any thread: the counters.
     engineCounters counters() const;
 
-    /// Control thread: frees retired plans and the clips banks gave back,
-    /// and returns what changed since the last call, in order: a plan is
-    /// activated before it retires, and plans activate in the order they
-    /// were played.
+    /// Control thread: frees retired plans and the clips that the clip
+    /// banks gave back, and returns what changed since the last call, in
+    /// order: a plan is activated before it retires, and plans activate in
+    /// the order they were played.
     std::vector<notice> collect();
 
     /// The I/O ports of sources and sinks.

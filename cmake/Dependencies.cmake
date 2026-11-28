@@ -17,7 +17,8 @@ set(ESPRESSO_FTXUI_TAG            v7.0.3)
 set(ESPRESSO_CATCH2_TAG           v3.16.1)
 set(ESPRESSO_JUCE_TAG             9.0.5)
 set(ESPRESSO_CURL_TAG             curl-8_19_0)
-# stb and dr_libs publish no release tags; these are master commits.
+# stb and dr_libs publish no release tags; these, and PFFFT's, are master
+# commits.
 set(ESPRESSO_STB_COMMIT           9600522de53973336fa033a289858a4354cbb04c)
 set(ESPRESSO_DR_LIBS_COMMIT       7f032b984ae5dd3ab8a58721375aca9200f91965)
 set(ESPRESSO_PFFFT_COMMIT         efc1dd2de6c3562fc464f905d37d9281f08a20dd)

@@ -18,7 +18,8 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 
-/// How long a start waits for the server's "listening on" line.
+/// How long a start waits for the server's "listening on" line; a server
+/// still running after it counts as started.
 const READY_WAIT: Duration = Duration::from_secs(5);
 /// How long a stop waits after SIGTERM before it kills the server.
 const STOP_WAIT: Duration = Duration::from_secs(3);
@@ -29,7 +30,8 @@ const POLL: Duration = Duration::from_millis(100);
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
 #[serde(tag = "state", rename_all = "camelCase")]
 pub enum Started {
-    /// The server answers on its port.
+    /// The server said it listens, or was still running after READY_WAIT
+    /// without saying so.
     Running,
     /// The server ended before it listened, with its status and its last
     /// line: "cannot listen on 127.0.0.1:57190" when another server has the
@@ -135,8 +137,9 @@ impl Server {
     }
 
     /// Starts the server with `root` as its project root (`--root`), and
-    /// waits until it listens or ends. A server already running with that
-    /// root is kept; one with another root is stopped first.
+    /// waits until it listens or ends, at most READY_WAIT. A server already
+    /// running with that root is kept; one with another root is stopped
+    /// first.
     pub fn start(&self, root: Option<PathBuf>) -> std::io::Result<Started> {
         {
             let mut running = self.running.lock().unwrap();

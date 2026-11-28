@@ -177,9 +177,8 @@ void webBridge::follow(portKind kind, std::map<shareKey, std::unique_ptr<Entry>>
     }
 }
 
-// Each error counts for its nodes; ioStats reports them at most once a
-// second per node, so a dead endpoint polled every 0.1 s does not flood
-// the console (io.md §10.2).
+// Counts @p n messages of @p e that did not read, for each of its nodes
+// (io.md §10.1). A count, not an error: nothing reaches the console.
 void webBridge::malformed(const shared& e, std::uint64_t n) {
     if (n > 0) stats_.add(e.nodes(), ioCount::malformed, n);
 }

@@ -166,7 +166,8 @@ private:
     }
 };
 
-// The document's title: its first panel's label.
+// The document's title: the label of the page's first labelled child, or
+// "espresso" when none has one.
 std::string titleOf(const pageNode& layout) {
     for (const auto& panel : layout.children) {
         if (!panel.label.empty()) return panel.label;

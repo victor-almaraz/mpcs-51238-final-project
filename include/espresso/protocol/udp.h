@@ -61,6 +61,7 @@ public:
     udpSocket& operator=(udpSocket&& other) noexcept;
     udpSocket(const udpSocket&) = delete;
     udpSocket& operator=(const udpSocket&) = delete;
+    /// Closes the socket.
     ~udpSocket();
 
     /// The bound port.

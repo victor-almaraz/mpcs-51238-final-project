@@ -1,6 +1,6 @@
-// Real-time scheduling for a thread the server starts itself: the
-// no-audio timer, which stands in for a device's audio thread. Has no
-// JUCE dependency.
+// Real-time scheduling for the threads the server starts itself: the
+// engine's workers, and the no-audio timer, which stands in for a
+// device's audio thread. Has no JUCE dependency.
 
 #pragma once
 

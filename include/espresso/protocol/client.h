@@ -62,9 +62,9 @@ public:
     /// Creates a client for @p options. @p unsolicited receives notifications and
     /// unsolicited failures, on the receiver thread.
     explicit client(clientOptions options = {}, listener unsolicited = {});
-    /// Sends `/notify 0` without waiting for the reply, so the server
-    /// stops sending notifications to this client's port, then stops the
-    /// receiver thread.
+    /// When a `/hello` succeeded, sends `/notify 0` without waiting for the
+    /// reply, so the server stops sending notifications to this client's
+    /// port. Then stops the receiver thread.
     ~client();
 
     client(const client&) = delete;
@@ -88,8 +88,8 @@ public:
     /// Transfers @p payload as plan @p planId: `/ir.begin`, chunks, and
     /// `/ir.end`, resending missing chunks (§6). After every
     /// `chunksPerWindow` chunks it waits for `/synced`, so a burst never
-    /// overflows a small server receive buffer. Returns an error message
-    /// on failure.
+    /// overflows a small server receive buffer. On failure, returns the
+    /// error and, when the server named one, the failing node or buffer.
     std::optional<planError> submitIr(std::int32_t planId, std::string_view payload);
 
     /// Time of the last datagram from the server.

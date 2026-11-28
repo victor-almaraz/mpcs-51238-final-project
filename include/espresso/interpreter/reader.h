@@ -25,16 +25,16 @@ struct sourceSpan {
 
 /// Kind of a syntax-tree node.
 enum class datumKind : std::uint8_t {
-    nil,
-    boolean,
-    integer,
-    floating,
-    quantity,
-    string,
-    keyword,
-    symbol,
-    list,
-    vector,
+    nil,       ///< `nil`
+    boolean,   ///< `#t` or `#f`, in datum::boolean
+    integer,   ///< An integer, in datum::integer
+    floating,  ///< A float, in datum::floating
+    quantity,  ///< A unit literal, in datum::quantity
+    string,    ///< A string, unescaped in datum::text
+    keyword,   ///< A keyword, its name without the colon in datum::text
+    symbol,    ///< A symbol, its name in datum::text
+    list,      ///< `( ... )`, its elements in datum::items
+    vector,    ///< `[ ... ]`, its elements in datum::items
 };
 
 /// A unit literal as written: its numeric value and suffix. Conversion

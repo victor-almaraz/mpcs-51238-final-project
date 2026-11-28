@@ -26,14 +26,16 @@ struct pageUnits {
     int w = 0;
     /// Rows.
     int h = 0;
+    /// Equal when every field is equal.
     friend bool operator==(const pageUnits&, const pageUnits&) = default;
 };
 
-/// The footprint of the control or display @p element, in units, before
-/// any `span` it gives: a knob 3 × 4 (big, 4 × 5), a toggle, button, or
-/// footswitch 3 × 3, a lamp or value 3 × 2, a select 4 × 2, a slider or
-/// meter 6 × 2 (2 × 6 vertical), a drawbar 2 × 6, a pad 8 × 8, a keyboard
-/// one unit per white key by 5.
+/// The footprint of the control, display, or space @p element, in units,
+/// before any `span` it gives: a knob 3 × 4 (big, 4 × 5), a toggle, button,
+/// or footswitch 3 × 3, a lamp, value, or screen 3 × 2, a select 4 × 2, a
+/// slider or meter 6 × 2 (2 × 6 vertical), a drawbar 2 × 6, an xy pad
+/// 8 × 8, a row of clips 6 plus 4 per slot by 2, a keyboard one unit per
+/// white key by 5.
 pageUnits footprintOf(const pageNode& element);
 
 /// A layout that cannot be drawn: a group given a `size` smaller than what

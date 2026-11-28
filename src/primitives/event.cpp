@@ -198,9 +198,9 @@ bool oscAddressIs(std::span<const std::byte> m, std::string_view address) noexce
 
 namespace {
 
-// Where an OSC message's type tags start, after the `,`, how many there
-// are with the comma, and where its arguments start; nothing when the
-// message is malformed.
+// Where an OSC message's type tag string starts (its leading `,`, which
+// the tags follow), how many characters it has with the comma, and where
+// its arguments start; nothing when the message is malformed.
 struct oscLayout {
     std::size_t tagsAt = 0;
     std::size_t tagCount = 0;

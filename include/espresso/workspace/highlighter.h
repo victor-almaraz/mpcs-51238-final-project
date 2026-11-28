@@ -17,16 +17,16 @@ namespace workspace {
 
 /// Highlight category of a span of text (`tui.md` §6.2).
 enum class highlightCategory : std::uint8_t {
-    comment,
-    string,
-    number,
-    unitLiteral,
-    keyword,
-    specialForm,
-    objectForm,
-    symbol,
-    delimiter,
-    error,
+    comment,      ///< Line, block, and datum comments, and the datum a `#;` comments out
+    string,       ///< String literals
+    number,       ///< Integer and floating-point literals
+    unitLiteral,  ///< Numbers with a unit, such as `250ms`
+    keyword,      ///< Keywords, booleans, and nil
+    specialForm,  ///< Special forms and definition forms
+    objectForm,   ///< Object system forms, such as `defclass`
+    symbol,       ///< Other symbols
+    delimiter,    ///< Brackets and quotes
+    error,        ///< Text the lexer rejects
 };
 
 /// Number of highlightCategory values.
@@ -51,8 +51,8 @@ struct highlightResult {
     std::vector<interpreter::token> tokens;
 };
 
-/// Highlights @p source with the tolerant lexer. Data after a `#;`
-/// datum comment are highlighted as comments.
+/// Highlights @p source with the tolerant lexer. The datum after a `#;`
+/// datum comment is highlighted as a comment.
 highlightResult highlight(std::string_view source);
 
 /// Category of a symbol by name: special form, object form, or symbol.

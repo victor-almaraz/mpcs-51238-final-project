@@ -1,8 +1,7 @@
-// Completion from the code's structure (the user's request, 2026-11-25).
-// The tokenizer's tree of lists (lisp.js, listTree) and its table of forms
-// (lisp.js, forms) give:
+// Completion from the code's structure. The tokenizer's tree of lists
+// (lisp.js, listTree) and its table of forms (lisp.js, forms) give:
 // - the names bound around the cursor: a `let`'s bindings, the parameters
-//   of a `fn`, a `define`, a `defpiece`, or a `defmethod`;
+//   of a `fn`, a `define`, a `defpiece`, a `defgeneric`, or a `defmethod`;
 // - the names the open files and the standard library define;
 // - the language's forms, its builtins, and its primitives (the sidecar's
 //   `language`, tauri-editor.md §4.5);

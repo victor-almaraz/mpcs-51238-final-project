@@ -158,9 +158,10 @@ private:
     int numSamples_ = 0;
     int capacity_ = metadata::maxChannels;
     int buffers_ = 2;
-    // Every buffer, `capacity_` channels each, zeroed by one memset: a
-    // vector's element-wise construction made a default pipe table take
-    // 85 ms instead of 5 ms in Debug builds (modern-cpp skill §9).
+    // Every buffer, `capacity_` channels each, zeroed by one memset. In
+    // Debug builds, element-wise construction of a std::vector makes a
+    // default pipe table take 85 ms, against 5 ms for one memset
+    // (modern-cpp skill §9).
     std::unique_ptr<float[]> owner_;  // NOLINT(modernize-avoid-c-arrays): skill §9
     std::span<float> samples_;
     bool swapped_ = false;
@@ -249,9 +250,10 @@ private:
     std::optional<poolRef> store(std::span<const std::byte> bytes) noexcept ESPRESSO_NONBLOCKING;
     void overflow() noexcept ESPRESSO_NONBLOCKING;
 
-    // Value-initialized arrays, not vectors, whose element-wise construction
-    // took 25 ms a table in Debug (modern-cpp skill §9). Construction writes
-    // every page, so the audio thread's first writes take no page fault.
+    // Value-initialized arrays, not vectors: in Debug builds, element-wise
+    // construction of vectors costs 25 ms a table (modern-cpp skill §9).
+    // Construction writes every page, so the audio thread's first writes
+    // take no page fault.
     std::unique_ptr<event[]> eventStore_;     // NOLINT(modernize-avoid-c-arrays): skill §9
     std::unique_ptr<std::byte[]> poolStore_;  // NOLINT(modernize-avoid-c-arrays): skill §9
     std::span<event> events_;

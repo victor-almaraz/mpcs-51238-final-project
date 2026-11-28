@@ -12,7 +12,7 @@ namespace primitives {
 namespace {
 
 // The largest cost per node of each type in 10 s Release renders of every
-// example and the load piece, on the development Mac (Intel Core
+// example and the load piece, on the reference machine (Intel Core
 // i5-7360U, 48 kHz, 256-sample blocks; `espresso-server --render
 // --profile`), rounded up. Types that cost less than the default are left
 // out. Sorted by type.

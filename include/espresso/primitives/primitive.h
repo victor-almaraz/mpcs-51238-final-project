@@ -108,8 +108,9 @@ public:
     std::string_view type() const noexcept { return type_; }
 
     /// Sets the fade for the next block: output gain ramps from
-    /// @p gainStart to @p gainEnd. A retiring primitive's control writes
-    /// and its events other than note-offs are discarded (§9.3.4).
+    /// @p gainStart to @p gainEnd. @p retiring marks a primitive fading out
+    /// with its plan, whose control writes and events other than note-offs
+    /// are discarded (§9.3.4).
     /// @p finalBlock marks a retiring primitive's last block. Called by
     /// the engine.
     void setFade(float gainStart, float gainEnd, bool retiring,

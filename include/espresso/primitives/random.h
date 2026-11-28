@@ -10,7 +10,8 @@
 
 namespace primitives {
 
-/// SplitMix64: small, fast, and good enough for audio noise and choices.
+/// SplitMix64: a 64-bit generator with one word of state, for audio noise
+/// and random choices. Not for cryptographic use.
 class rng {
 public:
     /// Starts the sequence at @p seed.

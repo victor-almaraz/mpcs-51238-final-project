@@ -35,14 +35,14 @@ enum class tokenKind : std::uint8_t {
 
 /// Reason a token is malformed.
 enum class lexError : std::uint8_t {
-    none,
-    unterminatedString,
-    unterminatedBlockComment,
-    invalidEscape,
-    malformedNumber,    ///< Numeric token with a bad suffix, such as `2x` (`grammar.md` §1.4)
-    emptyKeyword,       ///< `:` with no name
-    invalidHashSyntax,  ///< `#` not followed by `t`, `f`, `|`, or `;`
-    unexpectedCharacter,
+    none,                      ///< Not malformed
+    unterminatedString,        ///< `"` with no closing `"`
+    unterminatedBlockComment,  ///< `#|` with no matching `|#`
+    invalidEscape,             ///< `\` in a string not followed by `n`, `t`, `r`, `"`, or `\`
+    malformedNumber,           ///< Numeric token with a bad suffix, such as `2x` (`grammar.md` §1.4)
+    emptyKeyword,              ///< `:` with no name
+    invalidHashSyntax,         ///< `#` not followed by `t`, `f`, `|`, or `;`
+    unexpectedCharacter,       ///< A word holding a character no symbol or keyword may hold there
 };
 
 /// Returns a human-readable description of a lexical error.
@@ -50,18 +50,18 @@ std::string_view describe(lexError error) noexcept;
 
 /// Unit suffix of a unit literal (`grammar.md` §5).
 enum class unitSuffix : std::uint8_t {
-    s,
-    ms,
-    us,
-    smp,
-    beat,
-    bar,
-    hz,
-    khz,
-    bpm,
-    db,
-    st,
-    ct,
+    s,     ///< Seconds
+    ms,    ///< Milliseconds
+    us,    ///< Microseconds
+    smp,   ///< Samples, at the compilation's sample rate
+    beat,  ///< Beats
+    bar,   ///< Bars of 4 beats
+    hz,    ///< Hertz
+    khz,   ///< Kilohertz
+    bpm,   ///< Beats per minute, a frequency
+    db,    ///< Decibels, a level
+    st,    ///< Semitones
+    ct,    ///< Cents, hundredths of a semitone
 };
 
 /// Returns the suffix spelled by @p text, if any.

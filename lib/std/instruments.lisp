@@ -122,7 +122,7 @@
     (adsr :gate notes :in noisy :attack 0.5ms :decay 10ms :sustain 0 :release 5ms
           :gain (note-velocity notes)
           :out burst)
-    ;; The period of the note, at least 50 ms (20 Hz) before the first note.
+    ;; The period of the note, at most 50 ms (20 Hz), as before the first note.
     (comb :in burst
           :time (mapper freq (fn (x) (pow (max x 20) -1)))
           :max-time 50ms

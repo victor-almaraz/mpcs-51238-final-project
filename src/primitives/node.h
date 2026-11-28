@@ -433,14 +433,15 @@ public:
     // The private pipes the node bound to its outputs; one it did not bind
     // (an unused port) is not among them.
     privateOutputMap takePrivateOutputs() { return std::move(boundPrivate_); }
-    // Records that process() adds to the device's outputs, which orders
-    // the node after every other node that does (threads.md §4.1).
+    // Records that process() adds to the device's outputs, which makes
+    // the node depend on every earlier node that does, so all such nodes
+    // run one at a time in plan order (threads.md §4.1).
     void writeDevice() noexcept { writesDevice_ = true; }
     bool writesDevice() const noexcept { return writesDevice_; }
-    // Records that process() reports faults, which orders the node after
-    // every other node that does, so the fault queue has one producer at
-    // a time (threads.md §4.1, §4.4), and returns what it reports them
-    // with.
+    // Records that process() reports faults, which makes the node depend
+    // on every earlier node that does, so all such nodes run one at a time
+    // in plan order and the fault queue has one producer at a time
+    // (threads.md §4.1, §4.4), and returns what it reports them with.
     [[nodiscard]] faultReporter reportFaults() {
         reportsFaults_ = true;
         return {env_.io, node_.id};

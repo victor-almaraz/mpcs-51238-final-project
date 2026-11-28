@@ -433,11 +433,11 @@ dimension evaluator::pageRange(elementObject& e, const callContext& c) {
     return d;
 }
 
-// knob, slider, toggle, button, select, xy, keys, and clips: an osc-in on
-// the page port at the control's address, which every compile fills in
-// once the page is laid out; returns its pipe, for keys the notes
-// osc-notes makes of its messages, and for clips the notes of the
-// clipPlayer that plays its bank.
+// The controls (pageRole::sends: knob, slider, toggle, button, select, xy,
+// keys, clips, footswitch, and drawbar): an osc-in on the page port at the
+// control's address, which every compile fills in once the page is laid
+// out; returns its pipe, for keys the notes osc-notes makes of its
+// messages, and for clips the notes of the clipPlayer that plays its bank.
 value evaluator::pageControl(const pageKindSpec& spec, callContext& c) {
     const auto e = pageElement(spec, c);
     const std::string_view k = spec.kind;
@@ -727,10 +727,11 @@ void evaluator::slotControls(instanceObject& inst, std::vector<std::shared_ptr<e
     }
 }
 
-// page, panel, section, synth-panel, pedalboard, and pedal: a group of the
-// elements given after its label (a page has none), placing each once. A
-// pedal, a synth panel, or a section given an instance draws its :control
-// slots, and takes its class's name when it has no label.
+// The groups (pageRole::group: page, tab, panel, synth-panel, pedalboard,
+// section, and pedal): a group of the elements given after its label (a
+// page has none), placing each once. A pedal, a synth panel, or a section
+// given an instance draws its :control slots, and takes its class's name
+// when it has no label.
 value evaluator::pageGroupCall(const pageKindSpec& spec, callContext& c) {
     const auto e = pageElement(spec, c);
     if (spec.kind == metadata::pageRoot && e->labelled) {
@@ -773,10 +774,11 @@ value evaluator::pageGroupCall(const pageKindSpec& spec, callContext& c) {
 }
 
 // The page's layout, written into the graph: the page the piece made, or
-// one, with the controls and displays it placed nowhere in a last section,
-// in the order they were made. Each element without an address takes one
-// from its label under its sections' labels, a second of a name taking
-// -2, and its nodes the same.
+// one, with the elements placed nowhere added at its end, in the order they
+// were made: controls and displays as a last section of a last panel or
+// synth panel, anything else wrapped as page wraps what it is given. Each
+// element without an address takes one from its label under its sections'
+// labels, a second of a name taking -2, and its nodes the same.
 void evaluator::finishPage() {
     std::vector<std::shared_ptr<elementObject>> loose;
     for (const auto& e : pageElements_) {
@@ -816,8 +818,7 @@ void evaluator::finishPage() {
     }
     routeTabs();
     // Addresses written by hand are taken first, so a derived one never
-    // repeats one.
-    // The server's reload address is never derived.
+    // repeats one. The server's reload and clips addresses are never derived.
     std::set<std::string> taken{std::string(metadata::pageReloadAddress),
                                 std::string(metadata::pageClipsAddress)};
     // An element's reports (clips' /playing and /queued) are addresses of

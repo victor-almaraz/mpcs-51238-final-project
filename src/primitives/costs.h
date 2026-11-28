@@ -30,7 +30,7 @@ inline constexpr double defaultCost = 2.0;
 /// that runs the dependent node reads what the other wrote, a pipe of 1 KB
 /// at 256 samples, from another processor's cache (threads.md §6.1.1).
 /// Fitted to Release renders of every example at 256-sample blocks on the
-/// development Mac; the same at every block size.
+/// reference machine (Intel Core i5-7360U); the same at every block size.
 inline constexpr double dependencyCost = 600.0;
 
 }  // namespace primitives

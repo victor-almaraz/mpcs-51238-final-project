@@ -38,8 +38,8 @@ using metadata::pipeKind;
 using metadata::pipeRef;
 using metadata::portSpec;
 
-// What is wrong with @p v as the value of a number, choice, text, or list
-// parameter @p spec, if anything is: the message after the parameter's name.
+// What is wrong with @p v as the value of a number, choice, text, text
+// list, or list parameter @p spec, if anything is: the message after the parameter's name.
 std::optional<std::string> valueProblem(const paramSpec& spec, const metadata::paramValue& v) {
     switch (spec.dim) {
     case dimension::choice: {
@@ -320,13 +320,9 @@ private:
         }
     }
 
-    // The page's layout (dsl-ui.md §7.1): each element against its kind's
-    // table and its parent's, and each control's address against the nodes
-    // on the page port: a control sends to an address an oscIn reads (one
-    // without an address reads every one), a display shows one an oscOut
-    // sends.
-    // No oscIn or oscOut on the page port uses the address the server
-    // reloads pages on, which would reload them at every message.
+    // No oscIn or oscOut on the page port uses an address the server sends
+    // pages its own messages on (pageReloadAddress, pageClipsAddress): the
+    // pages would take every message on it for one of the server's.
     void checkReservedAddresses() {
         if (!graph_.pagePort) return;
         for (const nodeSpec& n : graph_.nodes) {
@@ -365,6 +361,11 @@ private:
         }
     }
 
+    // The page's layout (dsl-ui.md §7.1): each element against its kind's
+    // table and its parent's, and each control's address against the nodes
+    // on the page port: a control sends to an address an oscIn reads (one
+    // without an address reads every one), a display shows one an oscOut
+    // sends.
     void checkLayout() {
         if (!graph_.layout) return;
         const pageNode& root = *graph_.layout;

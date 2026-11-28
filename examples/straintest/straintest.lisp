@@ -1,4 +1,4 @@
-;; straintest: the piece of the v2 load test. Eight instruments of eight
+;; straintest: the engine's load-test piece. Eight instruments of eight
 ;; voices, each through two effects. Each instrument plays a note every
 ;; quarter beat that lasts two beats, so all eight of its voices sound
 ;; once the first two beats have passed: 64 voices.
@@ -11,7 +11,7 @@
 ;; for each instrument with its velocity and the mix of its two effects,
 ;; the note its sequencer plays, and the level of the instrument before its
 ;; effects; and the level of the whole piece. ui/script.js names the notes
-;; and flashes a light at each. Two inputs and three outputs an instrument,
+;; and flashes a light at each. Two inputs and two outputs an instrument,
 ;; and nothing per voice, keep the page's cost out of the test. Without the
 ;; page, the knobs keep the values written here.
 

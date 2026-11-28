@@ -8,7 +8,10 @@ import { h, rove, roving } from "./dom.js";
 
 const resultLimit = 1000;
 
-/** The matches of `query` in `text`: [{line, column, from, to, text}], at most `limit`. */
+/**
+ * The matches of `query` in `text`: [{line, column, from, to, text}], at most `limit`; null when `regex` is set and
+ * `query` is not a regular expression.
+ */
 export function matchesIn(text, query, { caseSensitive = false, regex = false } = {}, limit = resultLimit) {
   if (!query) return [];
   let pattern;

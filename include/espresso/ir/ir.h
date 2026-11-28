@@ -56,15 +56,17 @@ readResult read(std::string_view text);
 /// JSON writer: -1 for compact output.
 std::string write(const metadata::graphSpec& graph, int indent = -1);
 
-/// Semantic checks (`interpreter.md` §12.3): known types and parameters,
-/// value kinds and ranges, declared pipes of matching types, required
-/// ports, unique node IDs, and execution order (every reader of a pipe
-/// after all of its writers, except through feedback pipes).
+/// Semantic checks (`interpreter.md` §12.3) of the graph's declarations,
+/// its nodes against the primitive tables, and its page layout against
+/// the page kinds; `checker::run` in validate.cpp lists them. Execution
+/// order (every reader of a pipe after all of its writers, except through
+/// feedback pipes) is checked only when every other check passes.
 std::vector<error> validate(const metadata::graphSpec& graph);
 
 /// Sorts the nodes of @p graph so every writer of a pipe precedes its
-/// readers, except through feedback pipes; ties keep the original order.
-/// When the graph has a cycle, leaves it unchanged and returns the
+/// readers, except through feedback pipes, and every writer of a buffer
+/// precedes its readers where that closes no cycle; ties keep the original
+/// order. When the graph has a cycle, leaves it unchanged and returns the
 /// original indices of the nodes on cycles, in order.
 std::vector<std::size_t> sortByDataFlow(metadata::graphSpec& graph);
 
@@ -75,8 +77,9 @@ std::vector<std::size_t> sortByDataFlow(metadata::graphSpec& graph);
 /// audio pipes, including paths through other feedback pipes; parallel
 /// paths summed; when a node or parameter of unknown gain is on the loop,
 /// only an estimate above 1 warns), one warning per set of feedback pipes
-/// that reach each other; constant audio gains above +24 dB; and constant
-/// frequencies above half of @p sampleRate.
+/// that reach each other; constant audio gains above +24 dB; constant
+/// frequencies above half of @p sampleRate; and a buffer written by more
+/// than one node.
 std::vector<error> hazards(const metadata::graphSpec& graph, double sampleRate);
 
 /// The text of `schema/ir.schema.json`, embedded at build time.

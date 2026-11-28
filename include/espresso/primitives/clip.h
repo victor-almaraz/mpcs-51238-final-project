@@ -43,8 +43,8 @@ struct clipNote {
 struct clip {
     /// The notes, sorted by start.
     std::vector<clipNote> notes;
-    /// Its length in beats: the end of its last track, at least its last
-    /// note-off.
+    /// Its length in beats: the latest end of its tracks, at least its
+    /// last note-off.
     double length = 0.0;
 };
 

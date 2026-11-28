@@ -12,7 +12,7 @@
 /// bit-identical renders need (`threads.md` §1.3, §4.2.1): `-ffast-math`,
 /// and float expressions evaluated in a wider type (x87 arithmetic).
 /// Contraction into fused multiply-adds is turned off by the build
-/// (`-ffp-contract=off`, `cmake/EspressoHelpers.cmake`).
+/// (`-ffp-contract=off`, in the root `CMakeLists.txt`).
 
 #pragma once
 

@@ -71,7 +71,9 @@ struct serverCounters {
 /// What the session drives. The server's engine host implements it.
 class engine {
 public:
+    /// An engine with no state of its own.
     engine() = default;
+    /// Destroys the implementation through the interface.
     virtual ~engine() = default;
     // An interface: implementations are used by reference, never copied.
     engine(const engine&) = delete;
@@ -130,8 +132,8 @@ public:
     /// @p m addressed to every client that sent `/notify 1`.
     std::vector<outgoing> broadcast(const message& m) const;
 
-    /// The periodic `/counters` message for subscribed clients: missed
-    /// deadlines, xruns, drops, overflows, load, tempo, beat, and meter.
+    /// The periodic `/counters` message for subscribed clients, with the
+    /// arguments of `protocol.md` §5 taken from counters().
     std::vector<outgoing> countersMessages() const;
 
     /// Counts @p n datagrams that did not decode or could not be sent

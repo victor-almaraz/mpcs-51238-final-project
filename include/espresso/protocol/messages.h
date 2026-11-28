@@ -17,7 +17,8 @@ namespace protocol {
 /// Default UDP port of the server on 127.0.0.1.
 inline constexpr std::uint16_t defaultServerPort = 57190;
 
-/// Reply timeout and retry count for requests (`protocol.md` §3.2).
+/// Time to wait for each reply to a request, in milliseconds
+/// (`protocol.md` §3.2).
 inline constexpr int defaultTimeoutMs = 250;
 /// Resends after the first attempt.
 inline constexpr int defaultRetries = 3;
@@ -115,17 +116,17 @@ inline constexpr std::string_view ioError = "/io.error";
 
 /// Error codes carried by `/fail` (`protocol.md` §8).
 enum class errorCode : std::int32_t {
-    unknownAddress = 1,
-    malformedArguments = 2,
-    notConnected = 3,
-    versionMismatch = 4,
-    irIncomplete = 5,
-    irChecksumMismatch = 6,
-    irInvalid = 7,
-    unknownPlan = 8,
-    deviceError = 9,
-    signalFault = 10,  ///< A sink muted itself: non-finite samples
-    fileError = 11,    ///< A buffer could not be saved to its file
+    unknownAddress = 1,      ///< No handler for the address
+    malformedArguments = 2,  ///< Arguments missing, of the wrong type, or out of range
+    notConnected = 3,        ///< The client has not completed `/hello`
+    versionMismatch = 4,     ///< The client's metadata version differs from the server's
+    irIncomplete = 5,        ///< The assembled IR size differs from `/ir.begin`
+    irChecksumMismatch = 6,  ///< The assembled IR's CRC-32 differs from `/ir.begin`
+    irInvalid = 7,           ///< The announcement or the IR is invalid, or the plan cannot be built
+    unknownPlan = 8,         ///< No such plan, or it was already played
+    deviceError = 9,         ///< A device failed
+    signalFault = 10,        ///< A sink muted itself: non-finite samples
+    fileError = 11,          ///< A buffer could not be saved to its file
 };
 
 /// True when replies to @p addr carry the request ID as their first

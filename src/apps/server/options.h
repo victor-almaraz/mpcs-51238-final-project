@@ -61,8 +61,8 @@ std::optional<int> parse(std::span<const std::string_view> args, options& o, std
 
 /// The engine's options for @p o at @p sampleRate and @p blockSize:
 /// samples under `--root`, the buffer memory bound, and the threads.
-/// Workers are given
-/// real-time priority in a live engine, not in an offline render.
+/// Workers are given real-time priority in a live engine, not in an
+/// offline render.
 primitives::engineOptions engineOptionsFor(const options& o, double sampleRate, int blockSize);
 
 }  // namespace server

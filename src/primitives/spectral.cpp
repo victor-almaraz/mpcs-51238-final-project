@@ -1,5 +1,7 @@
 // Spectral primitives: fft analyzes a signal into frames and ifft
-// resynthesizes them by overlap-add (samples.md §10).
+// resynthesizes them by overlap-add (samples.md §10); pvDelay, pvFreeze,
+// and pvBlur process frames (§11); wavetableOsc plays band-limited tables
+// of a buffer (§9).
 
 #include "spectral.h"
 

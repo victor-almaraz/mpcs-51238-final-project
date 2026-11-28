@@ -1,6 +1,7 @@
-// Builtin functions: arithmetic with dimensions (grammar.md §5.2),
-// comparisons, the mapper operations on constants (primitives.md §7.9),
-// tempo, and mapper.
+// Bodies of builtin functions that evaluator::installBuiltins binds
+// (evaluator.cpp): arithmetic with dimensions (grammar.md §5.2),
+// comparisons, the mapper operations on constants (primitives.md §7.9), and
+// the vector, string, unit, tempo, and mapper builtins.
 
 #include <algorithm>
 #include <cmath>

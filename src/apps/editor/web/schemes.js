@@ -28,7 +28,8 @@ import { isMac, keyLabel } from "./dom.js";
  * standard keys leave them free (patterns.md §25.3), as F1 is Help, F5
  * Refresh, F9 the side pane, and F10 the menu bar's (GTK's and the HIG's
  * key for it); Play and Keyboard Shortcuts, which those F keys held; Help
- * (F1, the language reference until there is a user guide) and Preferences.
+ * (F1, the language reference), Preferences, Show All Commands, and Focus
+ * Next and Previous Part.
  */
 export const common = {
   F6: "stop", F8: "nextProblem", "Shift-F8": "previousProblem", F9: "toggleFileList", "Mod-F9": "toggleConsole",
@@ -183,7 +184,7 @@ function keysOf(scheme) {
   return { ...Object.fromEntries(Object.entries(s.keys).filter(([, c]) => !mac.has(c))), ...s.macKeys };
 }
 
-/** The window's single chords in `scheme`, by chord name: its own, then the F keys. */
+/** The window's single chords in `scheme`, by chord name: the scheme's own over `common`'s. */
 export function chordTable(scheme) {
   const table = new Map();
   for (const [binding, command] of Object.entries({ ...common, ...keysOf(scheme) })) {

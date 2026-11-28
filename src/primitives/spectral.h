@@ -1,5 +1,7 @@
-// Internal: frame rings, which carry spectral frames between primitives,
-// and the real FFT behind fft and ifft (samples.md §10).
+// Internal: frame rings, which carry spectral frames between primitives;
+// the real FFT behind fft, ifft, and the wavetable tables; the spectral
+// windows; and the band-limited tables of wavetableOsc (samples.md §9,
+// §10).
 
 #pragma once
 

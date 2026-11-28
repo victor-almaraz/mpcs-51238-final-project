@@ -36,7 +36,9 @@ enum class opcode : std::uint8_t {
     pong = 0xA,
 };
 
-/// A frame: unmasked, with a payload of any length, at most 2^63 bytes.
+/// A frame with a payload of any length, at most 2^63 bytes: the last of
+/// its message unless @p fin is false, and masked with @p mask when one is
+/// given (a client's frame), unmasked otherwise.
 std::string encodeFrame(opcode op, std::string_view payload, bool fin = true,
                         std::optional<std::array<std::uint8_t, 4>> mask = std::nullopt);
 

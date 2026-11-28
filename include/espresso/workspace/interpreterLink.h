@@ -68,7 +68,8 @@ struct serverStatus {
     /// when there are none.
     float busiest() const;
     /// The load as the status bar shows it: `Load 45%`, the busiest
-    /// thread's, then ` · Threads 4` for more than one thread.
+    /// thread's, then ` · Threads 4` for more than one thread; or `Load —`
+    /// when not connected.
     std::string loadText() const;
     /// The tempo as the status bar shows it: `120 BPM`, to one decimal
     /// place, or `— BPM` when not connected or not reported.
@@ -99,7 +100,7 @@ struct runRequest {
         connect,   ///< Connect to the server
         play,      ///< Read the project and play it
         stop,      ///< Stop with a fade
-        evalForm,  ///< Read one form and play it (`interpreter.md` §13.6)
+        evalForm,  ///< Check one form's syntax, then play the project (`interpreter.md` §13.6)
     };
 
     /// What to do.
@@ -141,9 +142,11 @@ struct runReply {
 /// Worker thread with request and reply queues.
 class interpreterLink {
 public:
-    /// @p wake is called from a worker thread after a reply is queued, so
-    /// the editor can collect it on its own thread.
+    /// @p wake is called from the link's worker thread or the server
+    /// client's receiver thread after a reply is queued, so the editor can
+    /// collect it on its own thread.
     explicit interpreterLink(linkOptions options = {}, std::function<void()> wake = {});
+    /// Stops the worker thread and joins it, then closes the connection.
     ~interpreterLink();
 
     interpreterLink(const interpreterLink&) = delete;
@@ -157,7 +160,7 @@ public:
     /// Removes and returns the queued replies.
     std::vector<runReply> takeReplies();
 
-    /// Blocks until every submitted request has a reply. For tests.
+    /// Blocks until every submitted request has a reply.
     void waitIdle();
 
 private:
@@ -187,8 +190,9 @@ private:
 
     // Worker thread only.
     std::int32_t nextPlan_ = 1;
-    // Plans accepted and not yet retired, newest last, for locating the
-    // nodes that /io.error names. Guarded by mutex_.
+    // Plans accepted and not yet retired, newest last: the receiver thread
+    // reads their page ports on /plan.active and locates the nodes that
+    // /io.error names. Shared by both threads and guarded by mutex_.
     std::map<std::int32_t, metadata::graphSpec> plans_;
     static constexpr std::size_t maxKeptPlans = 8;
     double serverRate_ = 48000.0;  // for smp literals

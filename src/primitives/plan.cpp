@@ -535,9 +535,13 @@ private:
 };
 
 // Adds the private pipes of a shared audio pipe's writers into it, in the
-// writers' order (threads.md §4.2). Each writer added its block once into
-// a cleared private pipe, so the sum has the bits the writers would have
-// left in the shared pipe themselves. A private pipe that forwards
+// writers' order (threads.md §4.2). A writer that adds its block once into
+// its cleared private pipe leaves 0 + w there, so the sum has the bits it
+// would have left in the shared pipe itself. A writer other than the first
+// that names the shared pipe at two outputs adds twice, a then b, and the
+// sum adds p + (a + b), which can differ in the last bit from the
+// (p + a) + b a direct write leaves; such a group never forwards
+// (mayForward()). A private pipe that forwards
 // (aPipe::forward) holds nothing: its writer added into the shared pipe
 // itself, in this order (§4.2.5). A group forwards all or none: the
 // builder gives every pipe of a group a target or none, and the engine

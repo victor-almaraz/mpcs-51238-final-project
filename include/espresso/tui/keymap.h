@@ -37,7 +37,9 @@ struct exCommand {
     std::string_view command;
 };
 
-/// Editor modes. Only the vim scheme leaves `insert`.
+/// Editor modes. Only the vim scheme leaves `insert`. In `insert`,
+/// printable keys insert text; `normal` takes vim commands; `visual`
+/// extends a selection.
 enum class editMode : std::uint8_t { insert, normal, visual };
 
 /// Name of @p mode, such as "insert".
@@ -50,8 +52,9 @@ std::span<const std::string_view> commandNames() noexcept;
 /// selection going.
 bool isMovementCommand(std::string_view command) noexcept;
 
-/// Bindings shared by every scheme: arrows, Home, End, Page Up, Page
-/// Down, Shift-selection, and Delete (`tui.md` §8.3).
+/// Bindings shared by every scheme, such as the arrow, Home, End, Page,
+/// Delete, and function keys, with their Shift-selection forms
+/// (`tui.md` §8.3).
 std::span<const keyBinding> commonBindings() noexcept;
 
 /// Bindings of @p scheme in @p mode, excluding commonBindings().

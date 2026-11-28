@@ -42,7 +42,7 @@ struct appOptions {
     std::filesystem::path projectRoot = ".";
     std::vector<std::filesystem::path> files;  ///< Files to open, relative to the root
     std::filesystem::path settingsFile;        ///< Empty: settingsPathFromEnvironment()
-    bool persistSettings = true;               ///< Write pane changes to the settings file
+    bool persistSettings = true;               ///< Write settings changes to the settings file
     workspace::linkOptions link;               ///< Interpreter and server connection
 };
 
@@ -54,6 +54,8 @@ public:
     /// Loads settings, opens the files in @p options, and starts the
     /// interpreter thread.
     explicit app(appOptions options);
+    /// Writes settings that a drag or scroll changed, then stops the
+    /// interpreter thread.
     ~app();
 
     app(const app&) = delete;
@@ -67,10 +69,12 @@ public:
 
     /// Handles one key in keymap.h notation. Returns false if ignored.
     bool handleKey(std::string_view key);
-    /// Handles one mouse event in screen coordinates.
+    /// Handles one mouse event in screen coordinates. Returns true when the
+    /// event was handled, so the screen is drawn again.
     bool handleMouse(const ftxui::Mouse& mouse);
-    /// Runs the command named @p name (`tui.md` §8.1). Returns false for
-    /// an unknown name.
+    /// Runs the command named @p name (`tui.md` §8.1). @p shifted is true
+    /// when Shift was held, so a movement command extends a Shift
+    /// selection. Returns false for an unknown name.
     bool runCommand(std::string_view name, bool shifted = false);
     /// Collects interpreter replies into the console.
     void collectReplies();
@@ -285,7 +289,8 @@ private:
     bool reachable(const target& t) const;     // drawn this frame in the active layer
     bool hits(const target& t, int x, int y) const;  // (x, y) is on t and inside its region
 
-    // Members are grouped by alignment to avoid padding: 8-byte members,
+    // Members are grouped by alignment to limit padding: members whose
+    // sizes are whole 8-byte words (pointer_, two ints, ends the group),
     // then the 16-byte-aligned ones (std::function and its holders), then
     // boxes and the small scalars.
     std::string clientVersion_;

@@ -40,7 +40,7 @@ enum class dimension : std::uint8_t {
 /// Lowercase name of @p d, for messages.
 std::string_view toString(dimension d) noexcept;
 
-/// True when a value of dimension @p d is a number: not a choice, text, list, or buffer.
+/// True when a value of dimension @p d is a number: not a choice, text, list, buffer, or text list.
 bool isNumeric(dimension d) noexcept;
 
 /// A set of pipe kinds, as bit flags.
@@ -170,7 +170,7 @@ struct constraint {
     std::string_view param = noText;
     /// The ports the rule names.
     std::span<const std::string_view> ports = noNames;
-    /// The channel count, for `rule::channels`.
+    /// The channel count, for `rule::channels`; the most entries, for `rule::atMost`.
     int count = 0;
     /// The accepted values, for `rule::oneOf`.
     std::span<const double> values = noValues;

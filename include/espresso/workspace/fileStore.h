@@ -46,7 +46,8 @@ public:
                                              const std::filesystem::path& to);
 
     /// When @p path was last written, as an opaque token that changes when
-    /// the file does (its modification time, in the file clock's ticks);
+    /// the file does (its modification time, in nanoseconds since the file
+    /// clock's epoch);
     /// nothing when it cannot be read. An editor keeps the token it read
     /// and writes only while the file still has it (`patterns.md` §13).
     static std::optional<std::string> modified(const std::filesystem::path& path);
@@ -56,8 +57,9 @@ public:
     /// are skipped. Symbolic links are listed by their own names, and
     /// linked directories are descended into, except a link to a
     /// directory that contains it, which would repeat forever.
-    /// At most @p limit files are listed: the walk stops at the next one, so
-    /// a caller that gets @p limit + 1 knows the folder holds more.
+    /// At most @p limit + 1 files are listed: the walk stops after the file
+    /// past the limit, so a caller that gets @p limit + 1 knows the folder
+    /// holds more.
     static std::vector<std::filesystem::path>
     listProject(const std::filesystem::path& root,
                 std::size_t limit = std::numeric_limits<std::size_t>::max());

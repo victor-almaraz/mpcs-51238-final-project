@@ -21,7 +21,8 @@ struct sourceLocation {
     std::size_t column = 1;  ///< 1-based, in code points
 };
 
-/// Severity or origin of a console entry.
+/// Severity or origin of a console entry: `info` for the editor's and
+/// interpreter's messages, `error` for errors, `server` for server messages.
 enum class consoleKind : std::uint8_t { info, error, server };
 
 /// One console line.

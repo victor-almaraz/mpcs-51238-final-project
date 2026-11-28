@@ -5,8 +5,8 @@
 /// `threadStackBytes`: secondary-thread stacks otherwise differ by
 /// platform (512 KiB on macOS; RLIMIT_STACK, or 2 MiB when unlimited, with
 /// glibc), and the interpreter's worker needs a measured size
-/// (`interpreter::maxEvalDepth`). Header-only. It lives in `protocol`, the
-/// lowest module that every component with a thread links.
+/// (`interpreter::maxEvalDepth`). Header-only, so a module that includes it,
+/// such as `primitives`, needs no link to `protocol`.
 
 #pragma once
 

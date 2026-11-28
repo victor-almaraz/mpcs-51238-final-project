@@ -256,16 +256,16 @@ struct nodeSchedule {
 };
 
 /// The least estimated cost of a task by default, in nanoseconds a block
-/// (`threads.md` §5.2, proposed): a task's bookkeeping, about a
+/// (`threads.md` §5.2): a task's bookkeeping, about a
 /// microsecond, then stays a few percent of its work.
 inline constexpr double defaultMinimumTaskCost = 20'000.0;
 
 /// The least estimated saving for which a schedule runs in parallel by
 /// default, in nanoseconds a block (`scheduleOptions::minimumParallelSaving`,
-/// `threads.md` §6.1.1). Calibrated on Release renders of every example on
-/// the development Mac at 2 threads: each example that renders slower in
-/// parallel is estimated to save nothing, and the one estimated to save
-/// least while rendering faster saves 7.5 µs.
+/// `threads.md` §6.1.1). In Release renders of every example at 2 threads
+/// on the reference machine (Intel Core i5-7360U), each example that
+/// renders slower in parallel is estimated to save nothing, and the one
+/// estimated to save least while rendering faster saves 7.5 µs.
 inline constexpr double defaultMinimumParallelSaving = 4'000.0;
 
 /// How the builder makes the schedules of plans and crossfades
@@ -325,14 +325,15 @@ public:
     /// Seconds each node has spent in process(), parallel to `nodes`, when
     /// the engine profiles (`engineOptions::profile`); written by the thread
     /// that runs the node, the audio thread or a worker, and read once the
-    /// plan has stopped (`threads.md` §11).
+    /// plan has stopped.
     std::vector<double> seconds;
     /// The buffers the plan declares, in declaration order, held for as
     /// long as the plan lives (`samples.md` §3.1).
     std::vector<std::shared_ptr<sampleBuffer>> buffers;
     /// Pipe declarations applied when the plan becomes active.
     std::vector<metadata::pipeDecl> pipes;
-    /// Every pipe the plan touches, sorted and unique.
+    /// Every pipe the plan touches except the tempo pipe, which persists
+    /// and is never cleared or swapped; sorted and unique.
     std::vector<metadata::pipeRef> used;
     /// The plan's feedback pipes, sorted.
     std::vector<metadata::pipeRef> feedback;

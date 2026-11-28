@@ -39,7 +39,7 @@ const projectKey = "espresso.project";
 const projectsFolderKey = "espresso.projectsFolder";  // where New Project and Open Example last made a folder
 const recentProjectsKey = "espresso.recentProjects";  // the folders opened, the last first (Open Recent…)
 const runKey = "espresso.run";
-const preferencesKey = "espresso.preferences";  // word wrap and the code's size (patterns.md §23.5)
+const preferencesKey = "espresso.preferences";  // word wrap, the code's size, the interface size (patterns.md §23.5)
 const codeSizes = { least: 8, most: 32, normal: 14 };
 const schemeKey = "espresso.keys";
 const recentKey = "espresso.recent";  // the recently opened files, by project
@@ -3522,11 +3522,11 @@ class App {
     });
   }
 
-  /** The alert: Cancel, Discard, Save, with Save the default. Resolves to "cancel", "discard", or "save". */
   /**
    * The HIG's alert: a heading, its consequence, and responses, Cancel
    * first; the last response is the default. Answers the chosen response's
-   * name, or "cancel".
+   * name, or "cancel". The responses are Cancel, Discard, and Save unless
+   * given.
    */
   ask({ heading, body, responses = [["Cancel", "cancel"], ["Discard", "discard", "destructive"], ["Save", "save", "primary"]] }) {
     return this.#modal((close) => {

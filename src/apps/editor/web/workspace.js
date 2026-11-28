@@ -81,7 +81,8 @@ export class Workspace extends EventTarget {
 
   /**
    * The file Play plays, as headless mode chooses it (headless.rs, entry_file): main.lisp, else NAME.lisp in a
-   * project NAME, else the project's only .lisp file other than project.lisp; null when none of these is.
+   * project NAME, else the only .lisp file at the project's top level other than project.lisp; null when none of
+   * these is.
    */
   get entry() {
     const files = this.files ?? [];
@@ -252,11 +253,11 @@ export class Workspace extends EventTarget {
     else this.#changed("state");
   }
 
-  /** Writes the document with `id`; its saved text is what was written. */
   /**
-   * Writes document `id`; false when there was nothing to write (a
-   * reference). Unless `overwrite`, the write is refused, with a SidecarError
-   * of code -32003, when the file changed on disk since it was read.
+   * Writes document `id`, whose saved text becomes what was written; false
+   * when there was nothing to write (a reference). Unless `overwrite`, the
+   * write is refused, with a SidecarError of code -32003, when the file
+   * changed on disk since it was read.
    */
   async save(id, options = {}) {
     const doc = this.document(id);

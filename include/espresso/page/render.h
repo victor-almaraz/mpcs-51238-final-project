@@ -22,10 +22,11 @@ inline constexpr std::string_view reloadAddress = metadata::pageReloadAddress;
 
 /// The document that draws @p layout, a tree whose root is a `page`; the
 /// same layout gives the same text. Parameters its kind does not have are
-/// left out. A @p served page, the one the server serves, loads itself
-/// again when the server sends `reloadAddress`, its value controls keeping
-/// the values the player set; a page written into a project (`--page`,
-/// Save Page), which the layout no longer draws, does not.
+/// left out. A @p served page, the one the server serves, reloads when the
+/// server sends `reloadAddress`, and its value controls keep the values the
+/// player set across the reload. A page written into a project (`--page`,
+/// Save Page) does not follow later changes to the layout, so it does
+/// neither.
 std::string render(const metadata::pageNode& layout, bool served = true);
 
 /// @p text with `&`, `<`, `>`, and `"` written as character references, for

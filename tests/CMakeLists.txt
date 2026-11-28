@@ -21,7 +21,7 @@ function(espresso_add_tests module)
     set(target ${module}_tests)
     file(GLOB_RECURSE sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/${module}/*.cpp")
     if(NOT sources)
-        return()  # the module has no tests yet
+        return()  # a module without tests
     endif()
     add_executable(${target} ${sources})
     target_link_libraries(${target} PRIVATE ${ARG_LINKS} Catch2::Catch2WithMain)
@@ -295,7 +295,7 @@ add_custom_target(test-badge
     COMMENT "Running the test suite and writing docs/badges/tests.svg"
     VERBATIM)
 
-# coverage-badge runs the suite in a ESPRESSO_COVERAGE tree and rewrites
+# coverage-badge runs the suite in an ESPRESSO_COVERAGE tree and rewrites
 # docs/badges/coverage.svg. The LLVM tools come from the compiler's own
 # directory first, so their profile format matches it.
 if(ESPRESSO_COVERAGE)

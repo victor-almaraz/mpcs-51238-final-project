@@ -1,10 +1,11 @@
 // Internal: the evaluator and graph builder behind compile().
 //
-// Values are small structs; heap objects (vectors, closures, builtins,
-// mapped pipes, environments) are shared_ptrs. Closures and environments
-// refer to each other, so the evaluator also registers every object and,
-// when the compilation ends, clears each one's references, which breaks
-// the cycles before the objects are freed. A compilation is short and
+// Values are small structs; heap objects (the subclasses of object:
+// vectors, closures, builtins, mapped pipes, instances, classes, generic
+// functions, page elements, and environments) are shared_ptrs. Closures
+// and environments refer to each other, so the evaluator also registers
+// every object and, when the compilation ends, clears each one's
+// references, which breaks the cycles before the objects are freed. A compilation is short and
 // builds one graph, so it needs no collector.
 
 #pragma once
@@ -113,7 +114,8 @@ inline value makeBoolean(bool b) {
     return v;
 }
 
-// A value of a heap kind: a vector, closure, builtin, instance, or generic.
+// A value of a heap kind: a vector, closure, builtin, instance, generic, or
+// page element.
 inline value makeObject(kind k, std::shared_ptr<object> obj) {
     value v;
     v.k = k;
@@ -207,8 +209,9 @@ struct builtinObject : object {
     std::string name;
     fn math;                                                 // positional form, if any
     metadata::optionalRef<metadata::primitiveSpec> primitive;  // keyword form, if any
-    // What a positional builtin's call may carry: keyword arguments (buffer),
-    // and :key, when the call makes something it names (mapper, buffer).
+    // What a positional builtin's call may carry: keyword arguments (buffer
+    // and the page kinds, such as knob), and :key, when the call makes
+    // something it names (mapper, buffer, and the page kinds).
     struct traits {
         bool keywords = false;
         bool names = false;

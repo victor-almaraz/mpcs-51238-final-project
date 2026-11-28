@@ -97,7 +97,7 @@ if(ESPRESSO_CHROME)
     add_test(NAME "page: espresso-ui.js controls send receive and reset in a browser (ui.md 7.2)"
         COMMAND "${ESPRESSO_CHROME}" --headless=new --disable-gpu --no-first-run
                 "--user-data-dir=${PROJECT_BINARY_DIR}/chrome-profile" --allow-file-access-from-files
-                --window-size=1280,1600 --dump-dom
+                --window-size=1280,1600 --virtual-time-budget=5000 --dump-dom
                 "file://${CMAKE_CURRENT_SOURCE_DIR}/page/controls_test.html")
     set_tests_properties("page: espresso-ui.js controls send receive and reset in a browser (ui.md 7.2)" PROPERTIES
         PASS_REGULAR_EXPRESSION "controls: ok" FAIL_REGULAR_EXPRESSION "controls: FAIL"
@@ -107,7 +107,7 @@ if(ESPRESSO_CHROME)
     add_test(NAME "page: espresso-ui.js lays out panels and sections on the page grid (dsl-ui.md 3)"
         COMMAND "${ESPRESSO_CHROME}" --headless=new --disable-gpu --no-first-run
                 "--user-data-dir=${PROJECT_BINARY_DIR}/chrome-profile" --allow-file-access-from-files
-                --window-size=1280,1600 --dump-dom
+                --window-size=1280,1600 --virtual-time-budget=5000 --dump-dom
                 "file://${CMAKE_CURRENT_SOURCE_DIR}/page/layout_test.html")
     set_tests_properties("page: espresso-ui.js lays out panels and sections on the page grid (dsl-ui.md 3)" PROPERTIES
         PASS_REGULAR_EXPRESSION "<pre id=\"result\">layout: ok</pre>" FAIL_REGULAR_EXPRESSION "<pre id=\"result\">layout: FAIL"
@@ -116,7 +116,7 @@ if(ESPRESSO_CHROME)
     add_test(NAME "page: espresso-ui.js draws synth panels pedals and their switches (dsl-ui.md 6)"
         COMMAND "${ESPRESSO_CHROME}" --headless=new --disable-gpu --no-first-run
                 "--user-data-dir=${PROJECT_BINARY_DIR}/chrome-profile" --allow-file-access-from-files
-                --window-size=1280,1600 --dump-dom
+                --window-size=1280,1600 --virtual-time-budget=5000 --dump-dom
                 "file://${CMAKE_CURRENT_SOURCE_DIR}/page/kits_test.html")
     set_tests_properties("page: espresso-ui.js draws synth panels pedals and their switches (dsl-ui.md 6)" PROPERTIES
         PASS_REGULAR_EXPRESSION "<pre id=\"result\">kits: ok</pre>" FAIL_REGULAR_EXPRESSION "<pre id=\"result\">kits: FAIL"

@@ -29,6 +29,7 @@ The build produces `build/bin/espresso-server` and `build/bin/espresso-client`. 
 | Document | Contents |
 |---|---|
 | [Installing](docs/guide/installing.md) | Requirements for each platform, building, the GUI editor, and the tests |
+| [A first piece](docs/guide/first-piece.md) | A sine tone: a project, playing, updating, a control on a page, and an offline render |
 | [The GUI editor](docs/guide/gui-editor.md) | The desktop editor and the client's sidecar mode |
 | [The terminal editor](docs/guide/terminal-editor.md) | The editor in a terminal: settings, themes, and keys |
 | [Playing](docs/guide/playing.md) | The compiler, the server live and without devices, and offline renders |

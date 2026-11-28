@@ -7,6 +7,7 @@ espresso is a workstation for acousmatic, aleatory, and automatic music, and the
 :maxdepth: 2
 
 guide/installing
+guide/first-piece
 guide/gui-editor
 guide/terminal-editor
 guide/playing

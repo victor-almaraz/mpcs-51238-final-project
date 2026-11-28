@@ -13,9 +13,9 @@ extensions = ["myst_parser", "breathe"]
 source_suffix = {".md": "markdown"}
 root_doc = "index"
 
-# docs/api/ is Doxygen's committed HTML, and api.md its main page in
-# Doxygen's Markdown dialect; badges/ holds images for README.md.
-exclude_patterns = ["api", "api.md", "badges", "requirements.txt"]
+# api.md is Doxygen's main page, in Doxygen's Markdown dialect; badges/
+# holds images for README.md.
+exclude_patterns = ["api.md", "badges", "requirements.txt"]
 
 # Headings up to level 3 get anchors, so `[Pages](language.md#pages)` links
 # resolve to a section.

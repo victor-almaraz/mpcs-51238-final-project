@@ -29,14 +29,13 @@ struct snippet {
     std::string text;
 };
 
-// Every lisp block of the Markdown files under docs/, except docs/api/.
+// Every lisp block of the Markdown files under docs/.
 std::vector<snippet> lispBlocks() {
     std::vector<snippet> out;
     const fs::path docs = fs::path(ESPRESSO_SOURCE_DIR) / "docs";
     std::vector<fs::path> files;
     for (const auto& e : fs::recursive_directory_iterator(docs)) {
-        const auto relative = fs::relative(e.path(), docs);
-        if (e.path().extension() == ".md" && *relative.begin() != "api") files.push_back(e.path());
+        if (e.path().extension() == ".md") files.push_back(e.path());
     }
     std::ranges::sort(files);
     for (const fs::path& file : files) {

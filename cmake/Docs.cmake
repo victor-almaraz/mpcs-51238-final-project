@@ -1,8 +1,8 @@
 # Two documentation targets:
 #
-# - `docs` builds the API reference with Doxygen: HTML into docs/api/,
-#   which is committed, with docs/api.md as its main page. The pages carry
-#   no timestamp, so regenerating unchanged headers changes no file.
+# - `docs` builds the API reference with Doxygen: HTML into
+#   build/docs/api/, which is not committed, with docs/api.md as its main
+#   page.
 # - `manual` builds the manual with Sphinx, MyST, and Breathe: the Markdown
 #   of docs/ and the C++ API from Doxygen XML, as HTML into
 #   build/docs/html/, which is not committed. The XML comes from a Doxygen
@@ -21,7 +21,7 @@ if(DOXYGEN_FOUND)
     set(DOXYGEN_PROJECT_NAME "${PROJECT_NAME}")
     set(DOXYGEN_PROJECT_NUMBER "${PROJECT_VERSION}")
     set(DOXYGEN_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/docs/doxygen")
-    set(DOXYGEN_HTML_OUTPUT "${PROJECT_SOURCE_DIR}/docs/api")
+    set(DOXYGEN_HTML_OUTPUT "${PROJECT_BINARY_DIR}/docs/api")
     set(DOXYGEN_EXTRACT_ALL NO)
     # A comment's first sentence is its summary, also in /// comments of
     # more than one line.
@@ -37,7 +37,7 @@ if(DOXYGEN_FOUND)
     set(DOXYGEN_STRIP_FROM_INC_PATH "${PROJECT_SOURCE_DIR}/include")
     set(DOXYGEN_USE_MDFILE_AS_MAINPAGE "${PROJECT_SOURCE_DIR}/docs/api.md")
     doxygen_add_docs(docs "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/docs/api.md"
-        COMMENT "Building the API reference into docs/api with Doxygen")
+        COMMENT "Building the API reference into ${PROJECT_BINARY_DIR}/docs/api with Doxygen")
 else()
     add_custom_target(docs
         COMMAND ${CMAKE_COMMAND} -E echo "Doxygen not found; docs target skipped"

@@ -1,6 +1,6 @@
 # API reference {#mainpage}
 
-The API reference documents the public C++ headers in `include/espresso/`. Each module's declarations are in a namespace named after the module. `espresso::jthread`, the self-joining thread type of every thread in the project, is in namespace `espresso`, declared in `include/espresso/protocol/jthread.h`. The HTML reference is generated into `docs/api/` by the `docs` build target; `docs/api/index.html` is its entry page.
+The API reference documents the public C++ headers in `include/espresso/`. Each module's declarations are in a namespace named after the module. `espresso::jthread`, the self-joining thread type of every thread in the project, is in namespace `espresso`, declared in `include/espresso/protocol/jthread.h`. The `docs` build target generates the HTML reference into `build/docs/api/`; `build/docs/api/index.html` is its entry page.
 
 | Namespace | Contents |
 |---|---|

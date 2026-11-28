@@ -1,6 +1,6 @@
 # Language reference
 
-A piece is a Lisp file whose entry piece, defined with `defpiece`, builds a graph of primitives. The compiler evaluates the file, builds the entry piece, and emits IR (`docs/ir.md`). This reference covers the language the compiler implements.
+A piece is a Lisp file whose entry piece, defined with `defpiece`, builds a graph of primitives. The compiler evaluates the file, builds the entry piece, and emits IR ([IR format](ir.md)). This reference covers the language the compiler implements.
 
 ## Files and pieces
 
@@ -21,7 +21,7 @@ A piece is a Lisp file whose entry piece, defined with `defpiece`, builds a grap
 
 The editor plays `main.lisp`; without one, it plays the file being edited. The piece named `main` is built unless another entry is given (`espresso-client --compile FILE --entry NAME`).
 
-A project is a directory of files. `import` paths are relative to the project root, with `.lisp` implied, and neither begin with `/` nor contain `..`: `(import "util/scales")` loads `util/scales.lisp`. Paths that begin with `std/` name the standard library, which is compiled into the client and which no project file replaces; `docs/library.md` describes it. The editor imports its open buffers, saved or not; `espresso-client --compile` reads files under `--root`, by default the compiled file's directory. `module` and `import` are top-level forms.
+A project is a directory of files. `import` paths are relative to the project root, with `.lisp` implied, and neither begin with `/` nor contain `..`: `(import "util/scales")` loads `util/scales.lisp`. Paths that begin with `std/` name the standard library, which is compiled into the client and which no project file replaces; [Standard library](library.md) describes it. The editor imports its open buffers, saved or not; `espresso-client --compile` reads files under `--root`, by default the compiled file's directory. `module` and `import` are top-level forms.
 
 A file with an `export` clause exports the names it lists; a file without one exports every top-level binding it defines, and none that it imports. `:only` binds the listed names, each of which must be exported. `:as` binds each name as `prefix/name`. Each file is evaluated once per compilation, at its first import; later imports bind its exports again. An import cycle is an error that lists the files in the cycle. Classes and generic functions are global, whichever file defines them.
 
@@ -148,7 +148,7 @@ Every primitive is called by its name in kebab-case (`sine-osc`, `delay-line`, `
 (add :in [a b] :out sum)
 ```
 
-Choice parameters take keywords (`:mode :low`); text parameters take strings (`:device "keyboard"`); list parameters take vectors (`:levels [1 0.5]`); text list parameters take vectors of strings (`:fields ["/main/temp" "/wind/speed"]`). `docs/ir.md` lists the primitive types; the tables in `src/metadata/primitiveSpec.cpp` list their parameters, ranges, defaults, and ports.
+Choice parameters take keywords (`:mode :low`); text parameters take strings (`:device "keyboard"`); list parameters take vectors (`:levels [1 0.5]`); text list parameters take vectors of strings (`:fields ["/main/temp" "/wind/speed"]`). [IR format](ir.md#primitive-types) lists the primitive types; the tables in `src/metadata/primitiveSpec.cpp` list their parameters, ranges, defaults, and ports.
 
 A `sequencer` moves to its next value at each event on `:in` other than a note-off, writes the current value to the control pipe on `:out`, and emits it as a value event on `:events`. `:order` is `:forward` (the default), `:backward`, `:ping-pong` (to the last value and back, without repeating either end), `:random` (drawn from a generator seeded from the project seed and the node ID), or `:once`. `:forward` and `:backward` wrap at the ends. `:once` stops on the last value: later events leave `:out` at the last value and emit nothing on `:events`, so the sequence plays one time. A node that adopts a sequencer's state across a plan swap keeps its position, including the end of a `:once` sequence.
 
@@ -441,7 +441,7 @@ A value maps to a control's travel through these attributes:
 | `options` | Names for the positions of a selector or a stepped range, separated by commas, the first for its lowest value |
 | `label` | The text shown with the control, and its name to assistive technology; the address when it is absent |
 
-`es-knob` also takes `sweep`, its travel either side of the top in degrees (135), and `angles`, a list of degrees that makes a selector stopping at each angle and sending the stop's index. `mod="low,high"` draws an arc around the track over the span a modulation reaches, from `low` to `high` in its travel from the knob's position, which the layout writes for a knob that `modulate` or `modulated` moves (`docs/library.md`, std/modulators); `--es-mod` colors it, the text color by default. Every control the user plays is reachable from the keyboard, and every control has the role and value its HTML counterpart has.
+`es-knob` also takes `sweep`, its travel either side of the top in degrees (135), and `angles`, a list of degrees that makes a selector stopping at each angle and sending the stop's index. `mod="low,high"` draws an arc around the track over the span a modulation reaches, from `low` to `high` in its travel from the knob's position, which the layout writes for a knob that `modulate` or `modulated` moves ([std/modulators](library.md#stdmodulators)); `--es-mod` colors it, the text color by default. Every control the user plays is reachable from the keyboard, and every control has the role and value its HTML counterpart has.
 
 A page adds scales and units by name. A scale maps a position from 0 to 1 to a value and back; a unit writes a value as text:
 

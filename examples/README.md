@@ -6,6 +6,27 @@ Every page but two is drawn from the piece's layout: the piece declares its cont
 
 `hectodrone`, `organ-pad`, and `phasing` are projects of several files that start at `main.lisp`. Give the server the example's folder as `--root`: its samples and its `ui/` files (the screens a drawn page adds) resolve against it. The test suite compiles every example and checks that it compiles to the same valid IR every time, and plays each piece of one file on the engine to check that it behaves as described. `espresso-client --compile` writes a piece's IR; the server plays it from a file or from standard input (`-`).
 
+| Example | Input | Description |
+|---|---|---|
+| `autoband` | Its page | A bass, a pad, a lead, and a drum machine playing loops of MIDI files, chosen from a matrix of clips on its page, each through an effect chain of its own |
+| `edits` | Wikimedia's stream of recent changes | A plucked note for each edit to a Wikimedia wiki, its velocity set by the page's length |
+| `firehose` | Bluesky's Jetstream | A short FM note for each public Bluesky post, on a pitch and length drawn at random |
+| `freeze-pedal` | Audio input 1, sustain pedal | A granular delay that the sustain pedal freezes on what it heard immediately before the pedal went down |
+| `grain-cloud` | None | A cloud of grains over struck glass, jittered in time and pitch and spread across the stereo field |
+| `hectodrone` | Any MIDI keyboard | Four voices of one hundred sawtooths, their detuning on the pitch-bend wheel and their filter on the modulation wheel |
+| `mini-clone` | Its page, a MIDI keyboard, audio input 1 | A monophonic synthesizer laid out after the Minimoog Model D, set from a panel in a web page |
+| `organ-pad` | A MIDI keyboard with two modulation wheels | A drawbar organ through a rotary speaker, a tape loop, and a reverb on each side |
+| `page-keys` | Its page | Eight subtractive voices and a chain of three pedals, the page drawn from the instrument's and the effects' controls |
+| `phasing` | A MIDI keyboard with two modulation wheels | Two marimbas that play one pattern on clocks that drift apart, over a pad of the held notes |
+| `rack` | Its page, a MIDI keyboard | A fixed modular synthesizer of thirteen modules, patched with cables in a web page |
+| `report` | None | Three detuned sines whose loudness the piece posts to a web endpoint every four beats |
+| `sampler-keys` | Any MIDI keyboard | One recording of middle C played across the keyboard by eight voices |
+| `serial-knob` | A potentiometer on a USB serial board | A drone whose filter cutoff follows the potentiometer |
+| `spectral-audioscape` | None | A short FM piano arpeggio looped from a buffer through an eight-band spectral delay, a spectral freeze, and a reverb |
+| `straintest` | None | The engine's load test: eight instruments of eight voices, each through two effects, each voice a stack of eight detuned layers |
+| `wavetable` | None | Three wavetable oscillators a fifth and an octave apart, swept from a sine table to a square and back |
+| `weather` | Open-Meteo, polled once a minute | A tone pitched by Chicago's temperature, and a noise raised by its wind |
+
 ## Running
 
 Compile and play an example on the default audio device. Buffer files resolve against the server's `--root`:

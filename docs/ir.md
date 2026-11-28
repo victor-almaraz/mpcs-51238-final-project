@@ -13,7 +13,7 @@ All values are canonical units: seconds, hertz, linear amplitude, semitones, and
 | `seed` | Integer ≥ 0 | No (0) | Project seed for random generators |
 | `tempo` | Number > 0 | No | Tempo set when the plan becomes active, in beats per minute |
 | `meter` | Integer ≥ 1 | No (4) | Beats per bar, for bar quantization |
-| `page` | `{"port": P, "layout": L}`, P from 1024 to 65535 | No | The project's page port: while the plan is active, the server serves the project's pages on TCP port P (`docs/language.md`, Pages). `layout`, optional, is the page's layout (Page layout) |
+| `page` | `{"port": P, "layout": L}`, P from 1024 to 65535 | No | The project's page port: while the plan is active, the server serves the project's pages on TCP port P ([Pages](language.md#pages)). `layout`, optional, is the page's layout (Page layout) |
 | `pipes` | Array of pipe declarations | Yes | Pipes the graph uses |
 | `buffers` | Array of buffer declarations | No | Buffers the graph uses |
 | `nodes` | Array of nodes | Yes | Nodes in execution order |

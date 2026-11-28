@@ -164,6 +164,7 @@ valgrind --leak-check=full --error-exitcode=1 build/tests/<module>_tests
 cmake --build build --target docs
 cmake --build build --target manual
 cmake --build build --target primitive-reference
+cmake --build build --target site
 build/bin/espresso-client --compile examples/wavetable/wavetable.lisp > wavetable.ir.json
 ```
 
@@ -318,4 +319,4 @@ v2 passes when a piece of 8 instruments with 2 effects each and 8 voices per ins
 - Write `docs/` in a formal reference-manual style: no first person, no hedging, no history or change narration, one term per concept.
 - Document public C++ APIs with Doxygen comments.
 - `cmake --build build --target docs` writes the Doxygen HTML of `include/espresso/` into `build/docs/api/`, uncommitted, with `docs/api.md` as its main page; the manual's C++ API page (`docs/reference/cpp.md`) is the published reference.
-- The manual is `docs/` and the C++ API built by Sphinx (MyST-Parser, Breathe) into `build/docs/html/`, uncommitted: `cmake --build build --target manual`, with the tool versions of `docs/requirements.txt` (README, Documentation). It fails on any warning; keep it warning-free. `docs/reference/primitives.md` is written from the primitive tables: rewrite it with the `primitive-reference` target after changing them, and commit it with the change.
+- The manual is `docs/` and the C++ API built by Sphinx (MyST-Parser, Breathe) into `build/docs/html/`, uncommitted: `cmake --build build --target manual`, with the tool versions of `docs/requirements.txt` (README, Documentation). It fails on any warning; keep it warning-free. `docs/reference/primitives.md` is written from the primitive tables: rewrite it with the `primitive-reference` target after changing them, and commit it with the change. The web site is `site/`'s landing page with the manual under `docs/`, assembled by the `site` target in `build/site/`; publishing it is the user's.

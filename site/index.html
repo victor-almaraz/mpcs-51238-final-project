@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>espresso: write what makes the sound, and how it plays</title>
+<meta name="description" content="espresso is a workstation and a Lisp dialect for music: pieces that build instruments and effect chains, and decide how they are played.">
+<link rel="icon" href="images/favicon.png">
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+<header class="top">
+  <a class="name" href="./"><img src="images/mark.png" alt="">espresso</a>
+  <nav>
+    <a class="wide" href="docs/guide/installing.html">Install</a>
+    <a class="wide" href="docs/tutorials/instrument.html">Tutorials</a>
+    <a href="docs/index.html">Documentation</a>
+    <a href="https://github.com/victor-almaraz/mpcs-51238-final-project">GitHub</a>
+  </nav>
+</header>
+
+<main>
+  <div class="hero">
+    <h1>Write what makes the sound,<br><em>and how it plays.</em></h1>
+    <p>espresso is a workstation for music written as code, and the Lisp dialect its pieces are written in. A piece builds its instruments and effect chains from primitives, draws their controls as a synthesizer's panel and a pedalboard, and decides how they are played: from recordings and spectra, by chance and live data, and by rules on a beat clock. A native engine plays it in real time, and changes to the code swap into the playing sound.</p>
+    <div class="actions">
+      <a class="button primary" href="docs/guide/first-piece.html">Write a first piece</a>
+      <a class="button" href="docs/index.html">Read the documentation</a>
+      <a class="button" href="https://github.com/victor-almaraz/mpcs-51238-final-project">Source on GitHub</a>
+    </div>
+    <figure class="shot">
+      <img src="images/editor.png" width="1920" height="1200" alt="The espresso editor: a project's files, a Lisp file with an error underlined at its place, the console, and a status bar with the server's load, tempo, and beat.">
+      <figcaption>The GUI editor, playing a piece: an error points to its place in the code, and the playing plan goes on.</figcaption>
+    </figure>
+  </div>
+
+  <section>
+    <p class="label">Make sounds</p>
+    <h2>Instruments and effect chains, in the language</h2>
+    <p>An instrument or an effect is a class whose methods build a graph of primitives: oscillators, filters, envelopes, delays, buffers, and spectral processors. Its settings are slots marked as controls, so the same class draws itself as a synthesizer's panel or as a pedal, and a chain of effects is a pedalboard. The standard library holds subtractive, FM, plucked, sampled, and drum instruments, and echo, chorus, reverb, overdrive, granular, and spectral effects, written in the same language as a piece's own.</p>
+    <div class="split">
+      <figure class="shot">
+        <img src="images/page.png" width="1920" height="1590" alt="A page drawn from a piece: a synthesizer panel with knobs and a keyboard, over a pedalboard of chorus, echo, and reverb pedals.">
+        <figcaption>The page of <code>page-keys</code>, drawn from its instrument's and effects' controls. The server serves it while the piece plays.</figcaption>
+      </figure>
+      <pre class="code"><span class="f">(import</span> <span class="s">"std/instruments"</span><span class="f">)</span>
+<span class="f">(import</span> <span class="s">"std/effects"</span><span class="f">)</span>
+
+<span class="c">;; A tremolo of the piece's own: a pedal</span>
+<span class="c">;; with a Rate knob on the pedalboard.</span>
+<span class="f">(defclass</span> tremolo (effect)
+  ((rate <span class="k">:initarg :rate</span> <span class="k">:initform</span> <span class="n">5hz</span>
+         <span class="k">:accessor</span> rate
+         <span class="k">:control</span> (<span class="p">knob</span> <span class="k">:min</span> <span class="n">0.5hz</span> <span class="k">:max</span> <span class="n">12hz</span>))))
+
+<span class="f">(defmethod</span> <span class="p">process</span> ((tr tremolo) in out)
+  <span class="f">(let</span> ((swing (<span class="p">pipe</span> <span class="k">:control</span>)))
+    (<span class="p">lfo</span> <span class="k">:rate</span> (rate tr) <span class="k">:depth</span> <span class="n">0.5</span> <span class="k">:offset</span> <span class="n">0.5</span> <span class="k">:out</span> swing)
+    (<span class="p">gain</span> <span class="k">:in</span> in <span class="k">:amount</span> swing <span class="k">:out</span> out)))
+
+<span class="f">(defpiece</span> main ()
+  <span class="f">(let</span> ((synth (<span class="p">make</span> subtractive <span class="k">:cutoff</span> <span class="n">1200hz</span>))
+        (notes (<span class="p">keys</span> <span class="s">"Keys"</span>))
+        (dry   (<span class="p">pipe</span> <span class="k">:audio</span>))
+        (out   (<span class="p">pipe</span> <span class="k">:audio</span>)))
+    (<span class="f">define</span> panel (<span class="p">synth-panel</span> synth notes))
+    (<span class="p">play</span> synth notes dry)
+    (<span class="f">define</span> board
+      (<span class="p">chain</span> dry out (<span class="p">make</span> tremolo)
+             (<span class="p">make</span> echo <span class="k">:time</span> <span class="n">0.75beat</span>)
+             (<span class="p">make</span> reverb)))
+    (<span class="p">audio-out</span> <span class="k">:in</span> out <span class="k">:channel</span> <span class="n">0</span>)
+    (<span class="p">page</span> panel board)))</pre>
+    </div>
+  </section>
+
+  <section>
+    <p class="label">Decide how they play</p>
+    <h2>Acousmatic, aleatory, and automatic</h2>
+    <p>The same piece that builds a sound decides its performance. A piece can play for loudspeakers alone, leave choices to chance and to the world, or follow rules that run by themselves, and any mix of the three.</p>
+    <div class="cards">
+      <div class="card">
+        <h3>Acousmatic</h3>
+        <p>Sound from recordings and their spectra: buffers loaded from sound files, sample players, clouds of grains, and spectral delays and freezes, rendered offline or played live.</p>
+      </div>
+      <div class="card">
+        <h3>Aleatory</h3>
+        <p>Choices left to chance and to live data: seeded random generators, <code>chance</code> and random sequences, and sources that read the weather, a stream of wiki edits, or every public post as it happens.</p>
+      </div>
+      <div class="card">
+        <h3>Automatic</h3>
+        <p>Music that runs by its own rules: sequencers and metronomes on a beat clock whose tempo the piece sets, MIDI clip loops that change on the grid, and modulators that move the instruments' knobs.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <p class="label">The editor</p>
+    <h2>Play while writing</h2>
+    <div class="split">
+      <div>
+        <p>The GUI editor plays the project on each Play and swaps each Update into the sound without stopping it: unchanged parts keep their state and changed ones crossfade. Errors and warnings point to their place in the code, completion knows the language's forms, primitives, and the keywords of each call, and a piece's page opens in a tab or a window of its own.</p>
+        <ul class="plain">
+          <li>Key schemes for CUA, Emacs, Vim, and nano</li>
+          <li>The language reference and standard library in the editor</li>
+          <li>A terminal editor for the same projects</li>
+          <li>Headless playing and offline renders from the command line</li>
+        </ul>
+      </div>
+      <figure class="shot">
+        <img src="images/completion.png" width="1920" height="1200" alt="Completion in the espresso editor, listing the parameters and ports of a primitive after a colon.">
+        <figcaption>Completion after a <code>:</code>: the parameters and ports of the call.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section>
+    <p class="label">The engine</p>
+    <h2>Real time, and the same every time</h2>
+    <div class="cards">
+      <div class="card">
+        <h3>A native engine</h3>
+        <p>A C++ engine plays the compiled graph on PipeWire through JACK. Its audio thread neither allocates memory nor takes a lock, and a change of plan reaches it through lock-free queues.</p>
+      </div>
+      <div class="card">
+        <h3>Several cores</h3>
+        <p>Independent parts of a piece run on worker threads beside the audio thread, and the output is bit-identical at every thread count.</p>
+      </div>
+      <div class="card">
+        <h3>Determinism</h3>
+        <p>The same piece and seed render the same file every time, so an aleatory piece can be heard again exactly, or performed anew with another seed.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <p class="label">Start</p>
+    <h2>From a first tone to a band</h2>
+    <div class="start">
+      <a href="docs/guide/installing.html"><strong>Install</strong><span>Build from source on Linux or macOS</span></a>
+      <a href="docs/guide/first-piece.html"><strong>A first piece</strong><span>A tone, a knob, and an update while it plays</span></a>
+      <a href="docs/tutorials/instrument.html"><strong>Tutorials</strong><span>Pedals, live data, grains, and clip loops</span></a>
+      <a href="docs/language.html"><strong>Language reference</strong><span>Every form, primitive, and control</span></a>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="inner">
+    <span>espresso · AGPLv3</span>
+    <a href="docs/index.html">Documentation</a>
+    <a href="docs/resources/data-apis.html">Live data APIs</a>
+    <a href="https://github.com/victor-almaraz/mpcs-51238-final-project">GitHub</a>
+  </div>
+</footer>
+</body>
+</html>

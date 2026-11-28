@@ -10,6 +10,9 @@
 #   C++ parser does not accept an attribute before `override`. The build
 #   fails on any warning.
 #
+# - `site` assembles the web site in build/site/: the landing page of
+#   site/, the editor's fonts, and the manual under docs/.
+#
 # Sphinx and its extensions are tools, not dependencies: install the
 # versions docs/requirements.txt pins, and point SPHINX_EXECUTABLE at their
 # sphinx-build when it is not on the PATH.
@@ -69,5 +72,28 @@ if(DOXYGEN_FOUND AND SPHINX_EXECUTABLE)
 else()
     add_custom_target(manual
         COMMAND ${CMAKE_COMMAND} -E echo "Doxygen or sphinx-build not found; manual target skipped"
+        VERBATIM)
+endif()
+
+# The web site: site/'s landing page at the root, the GUI editor's fonts
+# (fetched with the editor's web packages) beside it, and the manual under
+# docs/.
+if(TARGET manual-xml)
+    set(ESPRESSO_SITE_DIR "${PROJECT_BINARY_DIR}/site")
+    set(ESPRESSO_EDITOR_FONTS "${PROJECT_SOURCE_DIR}/src/apps/editor/web/vendor/fonts")
+    add_custom_target(site
+        COMMAND "${CMAKE_COMMAND}" -E rm -rf "${ESPRESSO_SITE_DIR}"
+        COMMAND "${CMAKE_COMMAND}" -E copy_directory "${PROJECT_SOURCE_DIR}/site" "${ESPRESSO_SITE_DIR}"
+        COMMAND "${CMAKE_COMMAND}" -E copy_directory "${PROJECT_BINARY_DIR}/docs/html" "${ESPRESSO_SITE_DIR}/docs"
+        COMMAND "${CMAKE_COMMAND}" -E make_directory "${ESPRESSO_SITE_DIR}/fonts"
+        COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${ESPRESSO_EDITOR_FONTS}/NotoSans.ttf"
+                "${ESPRESSO_EDITOR_FONTS}/NotoSans-OFL.txt" "${ESPRESSO_EDITOR_FONTS}/JetBrainsMono.ttf"
+                "${ESPRESSO_EDITOR_FONTS}/JetBrainsMono-OFL.txt" "${ESPRESSO_SITE_DIR}/fonts"
+        COMMENT "Assembling the web site in ${ESPRESSO_SITE_DIR}"
+        VERBATIM)
+    add_dependencies(site manual)
+else()
+    add_custom_target(site
+        COMMAND ${CMAKE_COMMAND} -E echo "Doxygen or sphinx-build not found; site target skipped"
         VERBATIM)
 endif()

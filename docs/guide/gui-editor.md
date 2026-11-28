@@ -2,9 +2,9 @@
 
 The GUI editor is a desktop application built with Tauri: a web interface in the system's webview, over the client run as its sidecar. The sidecar reads and writes the project's files, compiles it, and talks to the server. [Installing](installing.md#the-gui-editor) describes building it.
 
-The editor opens the project named on its command line (`espresso PROJECT`), else the project open when it last closed. It starts the bundled `espresso-server` with the project as its root, and stops it when the window closes. When another `espresso-server` already listens on the port, the editor plays on that server and leaves it running.
+The editor opens the project named on its command line (`espresso-editor PROJECT`), else the project open when it last closed. It starts the bundled `espresso-server` with the project as its root, and stops it when the window closes. When another `espresso-server` already listens on the port, the editor plays on that server and leaves it running.
 
-Keys below are written as on Linux. On macOS, ⌘ takes the place of Ctrl in every binding written with Ctrl and a letter, number, or symbol of the CUA scheme; Ctrl+Tab, Ctrl+Shift+Tab, and the nano scheme's keys stay on Ctrl.
+Keys below are written as on Linux. On macOS, ⌘ takes the place of Ctrl in the keys every scheme has and in the CUA scheme's keys, except Ctrl+Tab and Ctrl+Shift+Tab; the Emacs, Vim, and nano schemes' own keys stay on Ctrl. The CUA scheme on macOS also takes Ctrl+- and Ctrl+Shift+- for Back and Forward, Ctrl+⌘F for Fullscreen, and Ctrl+Shift+Right and Ctrl+Shift+Left for Expand Selection and Shrink Selection.
 
 ## The window
 
@@ -12,7 +12,7 @@ Keys below are written as on Linux. On macOS, ⌘ takes the place of Ctrl in eve
 |---|---|
 | Top bar | Play, which reads Update while a piece plays, and its ▾ Play Options; Stop; Page, while the playing piece serves a page; the command center, which shows the project's name and opens Go to File; the Side Bar and Panel buttons |
 | Banner | Under the top bar, only while the server or the client has stopped: the reason, and Retry or Restart |
-| Side bar | The project's files as one list, folders dimmed, the current file highlighted, and the entry file tagged "entry" |
+| Side bar | The project's files as one list, folders dimmed, the current file highlighted, and the entry file tagged `entry` |
 | Tabs | One tab a document, and the page's tab. A dot replaces the close button of a file with unsaved changes. A middle click closes a tab |
 | Code | The file, with line numbers, a margin of marks and problems, and fold chevrons |
 | Panel | Three views: Console, Problems (with a count), and Search. Its top edge drags to resize it, and Maximize Panel fills the window with it |
@@ -20,13 +20,13 @@ Keys below are written as on Linux. On macOS, ⌘ takes the place of Ctrl in eve
 
 F9 shows or hides the side bar and Ctrl+F9 the panel, in every scheme, as do the top bar's buttons and the View menu. In a window 1000 pixels wide or less, the side bar lies over the code and closes when a file opens; at 640 pixels or less, the command center, the buttons' labels, and some status items are hidden. The window keeps the layout across sessions.
 
-The menu bar holds File, Edit, Selection, View, Go, Play, and Help: the system's bar on macOS, a bar in the window on Linux. Each item shows its key in the current scheme when the key is one chord. Right-click, Shift+F10, or the Menu key opens the context menu of the code, the line gutter, a file in the side bar, a tab, the page's tab, the console, or a problem. A few commands are only in context menus: Copy Path, Copy Relative Path, and Open Containing Folder (a file); Reveal in Side Bar, Close Other Editors, and Close Saved Editors (a tab). Show All Commands… (Ctrl+Shift+K) lists every command that applies at the moment, with its key.
+The menu bar holds File, Edit, Selection, View, Go, Play, and Help: a bar in the window on Linux, and the system's bar on macOS, which adds the espresso and Window menus. Each item shows its key in the current scheme when the key is one chord. Right-click, Shift+F10, or the Menu key opens the context menu of the code, the line gutter, a file in the side bar, a tab, the page's tab, the console, or a problem. Rename…, Move to Trash, Copy Path, Copy Relative Path, and Open Containing Folder (a file), and Reveal in Side Bar, Close Other Editors, and Close Saved Editors (a tab) are in context menus and in no menu of the menu bar. Show All Commands… (Ctrl+Shift+K) lists every command that applies at the moment, with its key.
 
 ## Projects
 
 A project is a folder. File menu commands open one:
 
-- **New Project…** copies a template into a new folder and opens it: Empty piece, MIDI instrument, or Sine tone. The folder is named in the dialog, under the location used last, or `~/Projects` the first time. The folder must not exist, or must be empty.
+- **New Project…** copies a template into a new folder and opens it: `empty-piece`, `midi-instrument`, or `sine-tone`. The folder is named in the dialog, under the location used last, or `~/Projects` the first time. The folder must not exist, or must be empty.
 - **Open Folder…** opens a folder as the project.
 - **Open Recent…** lists the last ten projects; Clear Recent Folders empties the list.
 - **Open Example…** copies one of the examples into a folder of its own and opens it.
@@ -41,7 +41,7 @@ The entry file, the one Play plays, is `main.lisp`; else `NAME.lisp`, where `NAM
 - **New File…** (side bar, File menu) asks for a path in the project and creates the file.
 - **Save**, **Save As…**, and **Save All** write files. Save As writes to a new path in the project and refuses an existing one; the tab becomes the new file.
 - **Rename…** (a file's context menu; F2 in the CUA scheme) renames a file, and its marks and history follow it.
-- **Move to Trash** (a file's context menu, or Delete in the side bar) closes the file and moves it to the system's trash a few seconds later, after a toast whose Undo keeps it.
+- **Move to Trash** (a file's context menu, or Delete in the side bar) closes the file and shows a toast for 5 seconds; Undo in the toast keeps the file, and otherwise the file moves to the system's trash when the toast closes.
 - **Close Editor**, **Close All Editors**, and **Reopen Closed Editor** close and reopen tabs. A file with unsaved changes asks: Cancel, Discard, or Save.
 
 The editor watches the project's folder. A file changed by another program reloads when its tab has no unsaved changes; otherwise the tab keeps its changes, and Save asks whether to overwrite the other version or reload it. A file deleted by another program keeps its tab, marked unsaved, and Save writes it again. Quitting or opening another project asks once about every file with unsaved changes.
@@ -59,19 +59,19 @@ The editor watches the project's folder. A file changed by another program reloa
 
 The top bar's ▾ Play Options holds the crossfade (No Crossfade, 50 ms, 250 ms, 1 s), the quantize grid (None, Beat, Bar), which delays a swap to the next beat or bar of the server's beat clock, and Update on Save. Preferences holds the same settings.
 
-A compile that fails leaves the playing piece unchanged. Its errors appear in the console and in Problems, and a toast offers to show them: "Not played: N errors", or "Not updated: N errors; the playing plan goes on".
+A compile that fails leaves the playing piece unchanged. Its errors appear in the console and in Problems, and a toast offers to show them: `Not played: N errors`, or `Not updated: N errors; the playing plan goes on`.
 
 ## Pages
 
-A project whose `project.lisp` names a page port serves its page while a piece plays ([Pages](../language.md#pages)). The first time a plan with a page plays, the page opens in a tab, "Page · NAME". When that tab is closed, Play opens it again in front, and Update opens it behind the code. The Page button in the top bar and View → Show Page bring it forward.
+A project whose `project.lisp` names a page port serves its page while a piece plays ([Pages](../language.md#pages)). The first time a plan with a page plays, the page opens in a tab, `Page · NAME`. When that tab is closed, Play opens it again in front, and Update opens it behind the code. The Page button in the top bar and View → Show Page bring it forward.
 
 The page's tab has Reload, the page's address, Open in Window, and Open in Browser. Dragging the tab out of the tab strip opens the page in a window of its own, for a second screen; the window closes with the editor. Save Page as ui/index.html, in Show All Commands, writes the drawn page into the project as its own page, after asking when one exists.
 
 ## The status bar
 
-- **The server.** `● espresso-server · NN%`: the server and its busiest thread's load. It opens a popover of the server's address, thread count, load, missed deadlines, xruns, drops, overflows, and plan. While the server is not connected, the item reads "Connecting…", "Not connected", "espresso-server · No reply", or "espresso-client stopped".
+- **The server.** `● espresso-server · NN%`: the server and its busiest thread's load. It opens a popover of the server's address, thread count, load, missed deadlines, xruns, drops, overflows, and plan. While the server is not connected, the item reads `Connecting…`, `Not connected`, `espresso-server · No reply`, or `espresso-client stopped`.
 - **Tempo and beat.** `120 BPM · 3.2`: the beat clock's tempo, and the bar and beat, both counted from 1. Each reads `—` while it is unknown.
-- **Plan.** "Plan N", or "No Plan".
+- **Plan.** `Plan N`, or `No Plan`.
 - **Problems.** The counts of errors and warnings; a click shows Problems.
 - **Cursor.** `Ln L, Col C`; a click opens Go to Line.
 - **Key scheme.** CUA, Emacs, Vim with its mode (`Vim · NORMAL`), or nano; a click chooses another.
@@ -111,7 +111,7 @@ Every scheme has these keys:
 | Ctrl+Shift+K | Show All Commands… |
 | Ctrl+, | Preferences |
 | Ctrl+? | Keyboard Shortcuts |
-| Ctrl+F6, Ctrl+Shift+F6 | Move focus to the next or previous part of the window |
+| Ctrl+F6, Ctrl+Shift+F6 | Focus Next Part, Focus Previous Part |
 | Alt+1 … Alt+9 | Go to tab 1 to 9 (⌘1 to ⌘9 on macOS) |
 | Shift+F10, Menu | Context menu |
 
@@ -164,19 +164,19 @@ Help → Language Reference (F1) and Help → Standard Library show [the languag
 
 ## The command line
 
-The application's executable, `espresso`, chooses by its first argument:
+The application's executable, `espresso-editor`, chooses by its first argument:
 
 | Command | Runs |
 |---|---|
-| `espresso` | The editor, on the project open last |
-| `espresso PROJECT` | The editor, on the folder `PROJECT` |
-| `espresso --headless [server options]` | The server alone, with `espresso-server`'s options ([Playing](playing.md#the-server)) |
-| `espresso --headless --play PIECE [options]` | A piece live, without the editor, until Ctrl+C |
-| `espresso --headless --render PIECE --out FILE.wav [options]` | A piece offline to a WAV file |
-| `espresso --tui [client options]` | The [terminal editor](terminal-editor.md) |
-| `espresso --help` | The usage |
+| `espresso-editor` | The editor, on the project open last |
+| `espresso-editor PROJECT` | The editor, on the folder `PROJECT` |
+| `espresso-editor --headless [server options]` | The server alone, with `espresso-server`'s options ([Playing](playing.md#the-server)) |
+| `espresso-editor --headless --play PIECE [options]` | A piece live, without the editor, until Ctrl+C |
+| `espresso-editor --headless --render PIECE --out FILE.wav [options]` | A piece offline to a WAV file |
+| `espresso-editor --tui [client options]` | The [terminal editor](terminal-editor.md) |
+| `espresso-editor --help` | The usage |
 
-`PIECE` is IR (an `.ir.json` file, or `-` for standard input), a `.lisp` entry file, or a project folder, whose entry file follows the rule of Projects. A `.lisp` piece is compiled by the bundled client and given to the server, with its folder as `--root` unless one is named. Ctrl+C and SIGTERM pass to the server or the terminal editor, and the command exits with its status, or 128 plus the signal's number. A command line it refuses exits with status 2; a piece that does not compile, or an entry file it cannot find, with status 1.
+`PIECE` is IR (an `.ir.json` file, or `-` for standard input), a `.lisp` entry file, or a project folder, whose entry file follows the rule of [Projects](#projects). A `.lisp` piece is compiled by the bundled client and given to the server, with its folder as `--root` unless one is named. Ctrl+C and SIGTERM pass to the server or the terminal editor, and the command exits with its status, or 128 plus the signal's number. A command line it refuses exits with status 2; a piece that does not compile, or an entry file it cannot find, with status 1.
 
 ## The sidecar
 

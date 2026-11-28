@@ -51,7 +51,7 @@
 <span class="f">(defclass</span> tremolo (effect)
   ((rate <span class="k">:initarg :rate</span> <span class="k">:initform</span> <span class="n">5hz</span>
          <span class="k">:accessor</span> rate
-         <span class="k">:control</span> (<span class="p">knob</span> <span class="k">:min</span> <span class="n">0.5hz</span> <span class="k">:max</span> <span class="n">12hz</span>))))
+         <span class="k">:control</span> (<span class="p">knob</span> <span class="k">:min</span> <span class="n">0.5hz</span> <span class="k">:max</span> <span class="n">15hz</span>))))
 
 <span class="f">(defmethod</span> <span class="p">process</span> ((tr tremolo) in out)
   <span class="f">(let</span> ((swing (<span class="p">pipe</span> <span class="k">:control</span>)))
@@ -63,13 +63,14 @@
         (notes (<span class="p">keys</span> <span class="s">"Keys"</span>))
         (dry   (<span class="p">pipe</span> <span class="k">:audio</span>))
         (out   (<span class="p">pipe</span> <span class="k">:audio</span>)))
-    (<span class="f">define</span> panel (<span class="p">synth-panel</span> synth notes))
+    (<span class="f">define</span> panel (<span class="p">synth-panel</span> synth (<span class="p">section</span> <span class="s">"Keys"</span> notes)))
     (<span class="p">play</span> synth notes dry)
     (<span class="f">define</span> board
       (<span class="p">chain</span> dry out (<span class="p">make</span> tremolo)
              (<span class="p">make</span> echo <span class="k">:time</span> <span class="n">0.75beat</span>)
              (<span class="p">make</span> reverb)))
     (<span class="p">audio-out</span> <span class="k">:in</span> out <span class="k">:channel</span> <span class="n">0</span>)
+    (<span class="p">audio-out</span> <span class="k">:in</span> out <span class="k">:channel</span> <span class="n">1</span>)
     (<span class="p">page</span> panel board)))</pre>
     </div>
   </section>
@@ -120,7 +121,7 @@
     <div class="cards">
       <div class="card">
         <h3>A native engine</h3>
-        <p>A C++ engine plays the compiled graph on PipeWire through JACK. Its audio thread neither allocates memory nor takes a lock, and a change of plan reaches it through lock-free queues.</p>
+        <p>A C++ engine plays the compiled graph: on Linux on PipeWire through JACK, on macOS through Core Audio. Its audio thread neither allocates memory nor takes a lock, and a change of plan reaches it through lock-free queues.</p>
       </div>
       <div class="card">
         <h3>Several cores</h3>
@@ -140,7 +141,7 @@
       <a href="docs/guide/installing.html"><strong>Install</strong><span>Build from source on Linux or macOS</span></a>
       <a href="docs/guide/first-piece.html"><strong>A first piece</strong><span>A tone, a knob, and an update while it plays</span></a>
       <a href="docs/tutorials/instrument.html"><strong>Tutorials</strong><span>Pedals, live data, grains, and clip loops</span></a>
-      <a href="docs/language.html"><strong>Language reference</strong><span>Every form, primitive, and control</span></a>
+      <a href="docs/language.html"><strong>Language reference</strong><span>Every form and control, and every primitive</span></a>
     </div>
   </section>
 </main>

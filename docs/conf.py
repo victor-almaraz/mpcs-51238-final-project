@@ -1,6 +1,6 @@
-# Sphinx configuration of the espresso manual: the user guide, the language
-# reference, the standard library, the IR format, and the C++ API through
-# Breathe. CMake's `manual` target runs Sphinx with `-D version=` and
+# Sphinx configuration of the espresso manual: the user guide, the
+# tutorials, the language reference, the standard library, the primitive
+# reference, the IR format, the C++ API through Breathe, and the resources. CMake's `manual` target runs Sphinx with `-D version=` and
 # `-D release=` from the project's version and with the Doxygen XML
 # directory in `breathe_projects.espresso`.
 
@@ -28,11 +28,6 @@ breathe_domain_by_extension = {"h": "cpp"}
 html_theme = "alabaster"
 html_title = "espresso manual"
 html_show_sourcelink = False
-
-# ESPRESSO_NONBLOCKING expands to `[[clang::nonblocking]]` where the compiler
-# supports it (include/espresso/primitives/realtime.h); Sphinx's C++ parser
-# reads it as an attribute.
-cpp_id_attributes = ["ESPRESSO_NONBLOCKING"]
 
 
 def setup(app):

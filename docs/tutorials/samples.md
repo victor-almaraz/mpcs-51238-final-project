@@ -139,7 +139,7 @@ The `freeze` and `spectral-delay` effects of [std/effects](../library.md#stdeffe
 
 ## A ring of live input
 
-`buffer-write` records into a buffer, and a reader at a delay behind its head plays what it recorded, as `examples/freeze-pedal` does. This stage records audio input 1 into a ring and plays grains of it; the Freeze toggle also stops the recording.
+`buffer-write` records into a buffer, and a reader at a delay behind its head plays what it recorded, as the `granular-delay` effect in `examples/freeze-pedal` does. This stage records audio input 1 into a ring and plays grains of it; the Freeze toggle also stops the recording.
 
 ```lisp
 ;; Glass, its spectral cloud, and grains of audio input 1 half a second late;

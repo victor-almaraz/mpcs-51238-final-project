@@ -2,7 +2,7 @@
 
 # Primitives
 
-Every primitive, by the name the language calls it by and its IR type. A parameter takes a constant, written in any unit of its dimension, or, where the table names pipe kinds, a pipe of one of those kinds. Defaults and ranges are in the units shown; levels are shown in decibels. Ports connect pipes: inputs read them and outputs write them. The [language reference](../language.md) describes what the primitives do, and the [IR format](../ir.md) how they are written in the IR.
+Every primitive, by the name the language calls it by and its IR type. A parameter takes a constant, written in any unit of its dimension, or, where the table names pipe kinds, a pipe of one of those kinds. Defaults and ranges are in the units shown; levels are shown in decibels, and a level of 0 as silence. A time parameter that takes control pipes also takes a beat value, which follows the tempo. Ports connect pipes: inputs read them and outputs write them. The [language reference](../language.md) describes what the primitives do, and the [IR format](../ir.md) how they are written in the IR.
 
 ## Sources
 
@@ -25,26 +25,26 @@ IR type `midiIn`, a source. Inputs: none. Outputs: `:out` (event, required).
 
 ### osc-in
 
-IR type `oscIn`, a source. Inputs: none. Outputs: `:out` (event), `:value` (control).
+IR type `oscIn`, a source. Inputs: none. Outputs: `:out` (event), `:value` (control). One of the outputs `:out` or `:value` is bound.
 
 | Parameter | Dimension | Default | Values | Pipes |
 |---|---|---|---|---|
-| `:port` | number | 57120 | 1 to 65535 |  |
+| `:port` | number | 57120 | 1 to 65535, or `:page` |  |
 | `:address` | text |  |  |  |
 | `:initial` | number | 0 |  |  |
 
 ### serial-in
 
-IR type `serialIn`, a source. Inputs: none. Outputs: `:out` (event), `:value` (control).
+IR type `serialIn`, a source. Inputs: none. Outputs: `:out` (event), `:value` (control). One of the outputs `:out` or `:value` is bound.
 
 | Parameter | Dimension | Default | Values | Pipes |
 |---|---|---|---|---|
 | `:device` | text |  |  |  |
-| `:baud` | number | 115200 | 9600 to 921600 |  |
+| `:baud` | number | 115200 | 9600, 19200, 38400, 57600, 115200, 230400, 460800, 921600 |  |
 
 ### web-in
 
-IR type `webIn`, a source. Inputs: none. Outputs: `:out` (event), `:value` (control).
+IR type `webIn`, a source. Inputs: none. Outputs: `:out` (event), `:value` (control). One of the outputs `:out` or `:value` is bound. `:url` starts with `http://` or `https://`. `:fields` has at most 8 entries. `:fields`, when it has entries, has one for each channel of `:value`, when bound. Each entry of `:headers` is a request header, `Name: value`.
 
 | Parameter | Dimension | Default | Values | Pipes |
 |---|---|---|---|---|
@@ -56,7 +56,7 @@ IR type `webIn`, a source. Inputs: none. Outputs: `:out` (event), `:value` (cont
 
 ### web-stream
 
-IR type `webStream`, a source. Inputs: none. Outputs: `:out` (event), `:value` (control).
+IR type `webStream`, a source. Inputs: none. Outputs: `:out` (event), `:value` (control). One of the outputs `:out` or `:value` is bound. `:url` starts with `http://` or `https://`. `:fields` has at most 8 entries. `:fields`, when it has entries, has one for each channel of `:value`, when bound. Each entry of `:headers` is a request header, `Name: value`.
 
 | Parameter | Dimension | Default | Values | Pipes |
 |---|---|---|---|---|
@@ -67,7 +67,7 @@ IR type `webStream`, a source. Inputs: none. Outputs: `:out` (event), `:value` (
 
 ### web-socket
 
-IR type `webSocket`, a source. Inputs: none. Outputs: `:out` (event), `:value` (control).
+IR type `webSocket`, a source. Inputs: none. Outputs: `:out` (event), `:value` (control). One of the outputs `:out` or `:value` is bound. `:url` starts with `ws://` or `wss://`. `:fields` has at most 8 entries. `:fields`, when it has entries, has one for each channel of `:value`, when bound. Each entry of `:headers` is a request header, `Name: value`.
 
 | Parameter | Dimension | Default | Values | Pipes |
 |---|---|---|---|---|
@@ -85,7 +85,7 @@ IR type `audioOut`, a sink. Inputs: `:in` (audio, required). Outputs: none.
 | Parameter | Dimension | Default | Values | Pipes |
 |---|---|---|---|---|
 | `:channel` | number | 0 | 0 to 255 |  |
-| `:ceiling` | level | 0 dB | 0 to 0 dB |  |
+| `:ceiling` | level | 0 dB | silence to 0 dB |  |
 
 ### midi-out
 
@@ -98,11 +98,11 @@ IR type `midiOut`, a sink. Inputs: `:in` (event, required). Outputs: none.
 
 ### osc-out
 
-IR type `oscOut`, a sink. Inputs: `:in` (event), `:value` (control). Outputs: none.
+IR type `oscOut`, a sink. Inputs: `:in` (event), `:value` (control). Outputs: none. One of the inputs `:in` or `:value` is bound. With `:value` bound, `:address` is not empty.
 
 | Parameter | Dimension | Default | Values | Pipes |
 |---|---|---|---|---|
-| `:port` | number | 57120 | 1 to 65535 |  |
+| `:port` | number | 57120 | 1 to 65535, or `:page` |  |
 | `:address` | text | `/value` |  |  |
 
 ### buffer-save
@@ -121,18 +121,18 @@ IR type `serialOut`, a sink. Inputs: `:in` (event, required), `:value` (control)
 | Parameter | Dimension | Default | Values | Pipes |
 |---|---|---|---|---|
 | `:device` | text |  |  |  |
-| `:baud` | number | 115200 | 9600 to 921600 |  |
+| `:baud` | number | 115200 | 9600, 19200, 38400, 57600, 115200, 230400, 460800, 921600 |  |
 
 ### web-out
 
-IR type `webOut`, a sink. Inputs: `:in` (event, required), `:value` (control). Outputs: `:dropped` (control).
+IR type `webOut`, a sink. Inputs: `:in` (event, required), `:value` (control). Outputs: `:dropped` (control). `:url` starts with `http://` or `https://`. `:fields` has at most 8 entries. `:fields`, when it has entries, has one for each channel of `:value`, when bound. With `:value` bound, `:fields` is not empty. Each entry of `:headers` is a request header, `Name: value`.
 
 | Parameter | Dimension | Default | Values | Pipes |
 |---|---|---|---|---|
 | `:url` | text | required |  |  |
 | `:headers` | text list |  |  |  |
 | `:timeout` | time | 5 s | 100 ms to 3600 s |  |
-| `:method` | choice | `post` | `:post`, `:put`, `:get` |  |
+| `:method` | choice | `:post` | `:post`, `:put`, `:get` |  |
 | `:fields` | text list |  |  |  |
 
 ## Oscillators
@@ -180,7 +180,7 @@ IR type `noise`, a generator. Inputs: none. Outputs: `:out` (audio, required).
 
 | Parameter | Dimension | Default | Values | Pipes |
 |---|---|---|---|---|
-| `:color` | choice | `white` | `:white`, `:pink`, `:brown` |  |
+| `:color` | choice | `:white` | `:white`, `:pink`, `:brown` |  |
 
 ## Filters
 
@@ -190,18 +190,18 @@ IR type `biquad`, a generator. Inputs: `:in` (audio, required). Outputs: `:out` 
 
 | Parameter | Dimension | Default | Values | Pipes |
 |---|---|---|---|---|
-| `:mode` | choice | `low-pass` | `:low-pass`, `:high-pass`, `:band-pass`, `:notch`, `:all-pass`, `:peaking`, `:low-shelf`, `:high-shelf` |  |
+| `:mode` | choice | `:low-pass` | `:low-pass`, `:high-pass`, `:band-pass`, `:notch`, `:all-pass`, `:peaking`, `:low-shelf`, `:high-shelf` |  |
 | `:freq` | frequency | 1000 Hz | 0 Hz to 100000 Hz | audio, control |
 | `:q` | number | 0.7071 | 0.01 to 100 | control |
-| `:gain` | level | 0 dB | 0 to 60 dB | control |
+| `:gain` | level | 0 dB | silence to 60 dB | control |
 
 ### svf
 
-IR type `svf`, a generator. Inputs: `:in` (audio, required). Outputs: `:out` (audio), `:low` (audio), `:band` (audio), `:high` (audio), `:notch` (audio).
+IR type `svf`, a generator. Inputs: `:in` (audio, required). Outputs: `:out` (audio), `:low` (audio), `:band` (audio), `:high` (audio), `:notch` (audio). One of the outputs `:out`, `:low`, `:band`, `:high` or `:notch` is bound.
 
 | Parameter | Dimension | Default | Values | Pipes |
 |---|---|---|---|---|
-| `:mode` | choice | `low` | `:low`, `:band`, `:high`, `:notch` |  |
+| `:mode` | choice | `:low` | `:low`, `:band`, `:high`, `:notch` |  |
 | `:cutoff` | frequency | 1000 Hz | 0 Hz to 100000 Hz | audio, control |
 | `:q` | number | 0.7071 | 0.01 to 100 | audio, control |
 
@@ -213,21 +213,21 @@ IR type `ladder`, a generator. Inputs: `:in` (audio, required). Outputs: `:out` 
 |---|---|---|---|---|
 | `:cutoff` | frequency | 1000 Hz | 0 Hz to 100000 Hz | audio, control |
 | `:resonance` | number | 0 | 0 to 1 | audio, control |
-| `:drive` | level | 0 dB | 0 to 40 dB | audio, control |
+| `:drive` | level | 0 dB | silence to 40 dB | audio, control |
 
 ## Envelopes and modulation
 
 ### adsr
 
-IR type `adsr`, a generator. Inputs: `:in` (audio), `:gate` (event). Outputs: `:out` (audio, control, required).
+IR type `adsr`, a generator. Inputs: `:in` (audio), `:gate` (event). Outputs: `:out` (audio, control, required). With `:in` bound, `:out` is an audio pipe.
 
 | Parameter | Dimension | Default | Values | Pipes |
 |---|---|---|---|---|
 | `:attack` | time | 10 ms | 0 s to 3600 s | control |
 | `:decay` | time | 100 ms | 0 s to 3600 s | control |
-| `:sustain` | level | -3.1 dB | 0 to 0 dB | control |
+| `:sustain` | level | -3.1 dB | silence to 0 dB | control |
 | `:release` | time | 200 ms | 0 s to 3600 s | control |
-| `:gain` | level | 0 dB | 0 to 60 dB | control |
+| `:gain` | level | 0 dB | silence to 60 dB | control |
 
 ### lfo
 
@@ -235,7 +235,7 @@ IR type `lfo`, a generator. Inputs: none. Outputs: `:out` (audio, control, requi
 
 | Parameter | Dimension | Default | Values | Pipes |
 |---|---|---|---|---|
-| `:shape` | choice | `sine` | `:sine`, `:triangle`, `:saw`, `:square`, `:sample-and-hold` |  |
+| `:shape` | choice | `:sine` | `:sine`, `:triangle`, `:saw`, `:square`, `:sample-and-hold` |  |
 | `:rate` | frequency | 1 Hz | 0 Hz to 100000 Hz | audio, control |
 | `:phase` | number | 0 | 0 to 1 | audio, control |
 | `:depth` | number | 1 |  | audio, control |
@@ -248,7 +248,7 @@ IR type `smoother`, a generator. Inputs: `:in` (audio, control, required). Outpu
 | Parameter | Dimension | Default | Values | Pipes |
 |---|---|---|---|---|
 | `:time` | time | 50 ms | 0 s to 3600 s |  |
-| `:curve` | choice | `exponential` | `:exponential`, `:linear` |  |
+| `:curve` | choice | `:exponential` | `:exponential`, `:linear` |  |
 
 ## Delays
 
@@ -260,7 +260,7 @@ IR type `delayLine`, a generator. Inputs: `:in` (audio, required). Outputs: `:ou
 |---|---|---|---|---|
 | `:time` | time | 250 ms | 0 s to 3600 s | audio, control |
 | `:max-time` | time | 1 s | 0 s to 3600 s |  |
-| `:interpolation` | choice | `linear` | `:linear`, `:none`, `:cubic` |  |
+| `:interpolation` | choice | `:linear` | `:linear`, `:none`, `:cubic` |  |
 
 ### comb
 
@@ -294,7 +294,7 @@ IR type `bufferWrite`, a generator. Inputs: `:in` (audio, required), `:reset` (e
 | `:buffer` | buffer | required |  |  |
 | `:record` | number | 1 | 0 to 1 | audio, control |
 | `:keep` | number | 0 | 0 to 1 | audio, control |
-| `:mode` | choice | `loop` | `:loop`, `:once` |  |
+| `:mode` | choice | `:loop` | `:loop`, `:once` |  |
 
 ### buffer-read
 
@@ -304,7 +304,7 @@ IR type `bufferRead`, a generator. Inputs: none. Outputs: `:out` (audio, require
 |---|---|---|---|---|
 | `:buffer` | buffer | required |  |  |
 | `:position` | time | 0 s | -3600 s to 3600 s | audio, control |
-| `:interpolation` | choice | `cubic` | `:cubic`, `:linear`, `:none` |  |
+| `:interpolation` | choice | `:cubic` | `:cubic`, `:linear`, `:none` |  |
 
 ### sample-player
 
@@ -316,10 +316,10 @@ IR type `samplePlayer`, a generator. Inputs: `:trigger` (event, required). Outpu
 | `:rate` | number | 1 | -1000 to 1000 | audio, control |
 | `:root` | number | 60 | 0 to 127 |  |
 | `:start` | time | 0 s | 0 s to 3600 s | audio, control |
-| `:loop` | choice | `off` | `:off`, `:forward`, `:ping-pong` |  |
+| `:loop` | choice | `:off` | `:off`, `:forward`, `:ping-pong` |  |
 | `:loop-start` | time | 0 s | 0 s to 3600 s | audio, control |
 | `:loop-end` | time | 0 s | 0 s to 3600 s | audio, control |
-| `:interpolation` | choice | `cubic` | `:cubic`, `:linear`, `:none` |  |
+| `:interpolation` | choice | `:cubic` | `:cubic`, `:linear`, `:none` |  |
 
 ### grains
 
@@ -337,7 +337,7 @@ IR type `grains`, a generator. Inputs: `:trigger` (event). Outputs: `:out` (audi
 | `:pitch-jitter` | interval | 0 st | 0 st to 48 st | audio, control |
 | `:reverse` | number | 0 | 0 to 1 | audio, control |
 | `:spread` | number | 0 | 0 to 1 | audio, control |
-| `:window` | choice | `hann` | `:hann`, `:tukey`, `:triangle` |  |
+| `:window` | choice | `:hann` | `:hann`, `:tukey`, `:triangle` |  |
 
 ### wavetable-osc
 
@@ -349,7 +349,7 @@ IR type `wavetableOsc`, a generator. Inputs: none. Outputs: `:out` (audio, requi
 | `:freq` | frequency | 440 Hz | 0 Hz to 100000 Hz | audio, control |
 | `:phase` | number | 0 | 0 to 1 | audio, control |
 | `:position` | number | 0 | 0 to 1 | audio, control |
-| `:table-size` | number | 2048 | 256 to 4096 |  |
+| `:table-size` | number | 2048 | 256 to 4096, a power of two |  |
 
 ## Spectral
 
@@ -359,8 +359,8 @@ IR type `fft`, a generator. Inputs: `:in` (audio, required). Outputs: `:out` (fr
 
 | Parameter | Dimension | Default | Values | Pipes |
 |---|---|---|---|---|
-| `:size` | number | 2048 | 256 to 16384 |  |
-| `:overlap` | number | 4 | 2 to 4 |  |
+| `:size` | number | 2048 | 256 to 16384, a power of two |  |
+| `:overlap` | number | 4 | 2 to 4, a power of two |  |
 
 ### ifft
 
@@ -374,7 +374,7 @@ IR type `pvDelay`, a generator. Inputs: `:in` (frames, required), `:redraw` (eve
 |---|---|---|---|---|
 | `:max-time` | time | 4 s | 1 ms to 60 s |  |
 | `:time` | time | 500 ms | 0 s to 3600 s | audio, control |
-| `:shape` | choice | `flat` | `:flat`, `:rising`, `:falling`, `:random` |  |
+| `:shape` | choice | `:flat` | `:flat`, `:rising`, `:falling`, `:random` |  |
 | `:spread` | number | 1 | 0 to 1 | audio, control |
 | `:feedback` | number | 0 | -0.99 to 0.99 | audio, control |
 | `:mix` | number | 1 | 0 to 1 | audio, control |
@@ -408,7 +408,7 @@ IR type `multiply`, a generator. Inputs: `:in` (audio, control, required, severa
 
 ### mix
 
-IR type `mix`, a generator. Inputs: `:in` (audio, control, required, several pipes). Outputs: `:out` (audio, control, required).
+IR type `mix`, a generator. Inputs: `:in` (audio, control, required, several pipes). Outputs: `:out` (audio, control, required). `:levels`, when it has entries, has one for each pipe of `:in`.
 
 | Parameter | Dimension | Default | Values | Pipes |
 |---|---|---|---|---|
@@ -433,7 +433,7 @@ IR type `clip`, a generator. Inputs: `:in` (audio, control, required). Outputs: 
 
 ### pan
 
-IR type `pan`, a generator. Inputs: `:in` (audio, required). Outputs: `:out` (audio, required).
+IR type `pan`, a generator. Inputs: `:in` (audio, required). Outputs: `:out` (audio, required). `:out`, when bound, has a pipe of at least 2 channels.
 
 | Parameter | Dimension | Default | Values | Pipes |
 |---|---|---|---|---|
@@ -446,7 +446,7 @@ IR type `crossfade`, a generator. Inputs: `:a` (audio, control, required), `:b` 
 | Parameter | Dimension | Default | Values | Pipes |
 |---|---|---|---|---|
 | `:position` | number | 0.5 | 0 to 1 | audio, control |
-| `:law` | choice | `equal-power` | `:equal-power`, `:linear` |  |
+| `:law` | choice | `:equal-power` | `:equal-power`, `:linear` |  |
 
 ## Conversion
 
@@ -621,7 +621,7 @@ IR type `eventFilter`, a generator. Inputs: `:in` (event, required). Outputs: `:
 
 | Parameter | Dimension | Default | Values | Pipes |
 |---|---|---|---|---|
-| `:type` | choice | `any` | `:any`, `:note`, `:control-change`, `:pitch-bend`, `:program-change`, `:pressure`, `:trigger`, `:value`, `:osc` |  |
+| `:type` | choice | `:any` | `:any`, `:note`, `:control-change`, `:pitch-bend`, `:program-change`, `:pressure`, `:trigger`, `:value`, `:osc` |  |
 | `:channel` | number | 0 | 0 to 16 |  |
 | `:low` | number | 0 | 0 to 127 |  |
 | `:high` | number | 127 | 0 to 127 |  |
@@ -659,12 +659,12 @@ IR type `metro`, a generator. Inputs: none. Outputs: `:out` (event, required).
 
 ### sequencer
 
-IR type `sequencer`, a generator. Inputs: `:in` (event, required). Outputs: `:out` (control), `:events` (event).
+IR type `sequencer`, a generator. Inputs: `:in` (event, required). Outputs: `:out` (control), `:events` (event). `:values` has an entry.
 
 | Parameter | Dimension | Default | Values | Pipes |
 |---|---|---|---|---|
 | `:values` | list |  |  |  |
-| `:order` | choice | `forward` | `:forward`, `:backward`, `:ping-pong`, `:random`, `:once` |  |
+| `:order` | choice | `:forward` | `:forward`, `:backward`, `:ping-pong`, `:random`, `:once` |  |
 
 ### chance
 
@@ -681,7 +681,7 @@ IR type `threshold`, a generator. Inputs: `:in` (audio, control, required). Outp
 | Parameter | Dimension | Default | Values | Pipes |
 |---|---|---|---|---|
 | `:level` | number | 0 |  | control |
-| `:direction` | choice | `rising` | `:rising`, `:falling`, `:both` |  |
+| `:direction` | choice | `:rising` | `:rising`, `:falling`, `:both` |  |
 
 ### sample-and-hold
 

@@ -17,12 +17,12 @@ espresso is a Linux-first workstation for acousmatic, aleatory, and automatic mu
 ## Build
 
 ```bash
-cmake -B build -S . -G Ninja
+cmake -B build -S .
 cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-The build produces `build/bin/espresso-server` and `build/bin/espresso-client`. CMake downloads every library into `third_party/` at configure time.
+The build produces `build/bin/espresso-server` and `build/bin/espresso-client`. CMake downloads the C++ libraries into `third_party/` at configure time. OpenSSL comes from the system, and the GUI editor's Rust crates come through Cargo.
 
 ## Documentation
 
@@ -66,7 +66,7 @@ cmake -B build -S . -DSPHINX_EXECUTABLE="$PWD/build/docs-venv/bin/sphinx-build"
 cmake --build build --target manual
 ```
 
-Without Doxygen or `sphinx-build`, the target reports that it is skipped. `docs/index.md` is the manual's contents, and `docs/conf.py` its configuration.
+The `docs` target needs Doxygen; the `manual` and `site` targets need Doxygen and `sphinx-build`. Without the tools it needs, a target reports that it is skipped. `docs/index.md` is the manual's contents, and `docs/conf.py` its configuration.
 
 The web site is the landing page of `site/`, in the GUI editor's style, with the manual under `docs/`. The `site` target builds the manual and assembles the site, with the editor's fonts, in `build/site/`, which a static host serves as it is:
 

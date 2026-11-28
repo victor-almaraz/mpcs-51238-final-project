@@ -12,7 +12,7 @@ Linux is the release platform. macOS builds and runs the same programs from the 
 - OpenSSL, for libcurl's TLS
 - Optional: Ninja, Doxygen, Valgrind
 
-CMake downloads every library into `third_party/` at configure time: JUCE, FTXUI, nlohmann/json, json-schema-validator, Catch2, stb, dr_libs, PFFFT, and libcurl, each pinned to a release or a commit. The libraries build as part of the project and link statically.
+CMake downloads the libraries into `third_party/` at configure time, each pinned to a release or a commit: nlohmann/json, json-schema-validator, PFFFT, stb, dr_libs, and libcurl in every build; JUCE with the server; FTXUI with the client or the tests; and Catch2 with the tests. With the GUI editor, it also downloads the editor's web packages (CodeMirror 6 and marked) and fonts, each pinned by version and checksum. The C and C++ libraries build as part of the project and link statically.
 
 ### Linux
 
@@ -24,7 +24,7 @@ sudo apt install build-essential cmake ninja-build git pkg-config libasound2-dev
 
 Other distributions name the same packages differently: a compiler, CMake, Git, `pkg-config`, and the development packages of ALSA, JACK, and OpenSSL.
 
-At run time the server connects to PipeWire through its JACK interface (`pipewire-jack`), or to a JACK server, and falls back to ALSA when neither lists a device ([Playing](playing.md#the-server)). Real-time scheduling needs an rtprio limit, which the `audio` group grants on most distributions ([Performance](performance.md#threads)).
+At run time the server connects to PipeWire through its JACK interface (`pipewire-jack`), or to a JACK server, and falls back to ALSA when neither lists a device ([Playing](playing.md#the-server)). Real-time scheduling needs an rtprio limit, such as the one `/etc/security/limits.d/` grants the `audio` group ([Performance](performance.md#linux-settings)).
 
 ### macOS
 
@@ -78,7 +78,7 @@ cd src/apps/editor/src-tauri
 cargo tauri dev
 ```
 
-`cargo tauri build` builds the application's executable, `espresso`, in release mode. The window starts `espresso-server` and the client itself ([The GUI editor](gui-editor.md)).
+`cargo tauri build` builds the application's executable, `espresso-editor`, in release mode, in `src/apps/editor/src-tauri/target/release/`. The window starts `espresso-server` and the client itself ([The GUI editor](gui-editor.md)).
 
 ## Tests
 
@@ -104,7 +104,7 @@ The coverage tree is configured with Clang and `-DESPRESSO_COVERAGE=ON` on first
 The LLVM tools need the SDK path. clang-tidy takes it as an extra argument, and the RealtimeSanitizer tree takes it in its compiler flags, with Homebrew's C and C++ compilers:
 
 ```bash
-run-clang-tidy -p build -quiet -extra-arg=-isysroot$(xcrun --show-sdk-path) 'src/|include/|tests/'
+run-clang-tidy -p build -quiet -extra-arg=-isysroot$(xcrun --show-sdk-path) "^$PWD/(src|include|tests)/"
 ```
 
 ```bash

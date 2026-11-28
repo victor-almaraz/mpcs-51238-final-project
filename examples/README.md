@@ -153,7 +153,7 @@ build/bin/espresso-client --compile examples/straintest/straintest.lisp | build-
 scripts/straintest.sh -r 5 -s 10
 ```
 
-Its page is the load test's rig: a strip for each of the eight instruments, named by its number and instrument, with the note its sequencer plays, a light at each note, and the instrument's level before its effects; each strip sets the instrument's velocity and the wet mix of both its effects. A master meter shows the whole piece's level. The page adds two inputs and two outputs an instrument and nothing a voice, so the test's cost stays the piece's own.
+Its page is the load test's rig: a strip for each of the eight instruments, named by its number and instrument, with the note its sequencer plays, a light at each note, and the instrument's level before its effects; each strip sets the instrument's velocity and the wet mix of both its effects. A master meter shows the whole piece's level. The page adds two inputs and two outputs per instrument and nothing per voice, so the test's cost stays the piece's own.
 
 ## autoband
 

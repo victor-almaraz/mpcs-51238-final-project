@@ -8,7 +8,7 @@ A piece plays in two stages: the client compiles the project to its intermediate
 build/bin/espresso-client --compile FILE.lisp [--root DIR] [--entry NAME] [--seed N]
 ```
 
-Compiles a piece in `FILE.lisp` and writes its IR to standard output. The piece and the seed are those the root directory's `project.lisp` names, by default `main` and 0; `--entry NAME` and `--seed N` override them. Errors go to standard error as `file:line:column: message`, and the exit status is 1. `--seed N` takes a whole number from 0 to 2⁶⁴ − 1; any other value, or an unknown option, exits with status 2. Warnings about likely audio hazards (loops that grow, very large gains, aliasing frequencies, a buffer written by more than one node) go to standard error and do not change the exit status. The [language reference](../language.md) describes the supported language, and [Standard library](../library.md) the standard library of instruments and effects. Imports resolve against `--root`, by default FILE's directory. The IR can be piped to the server:
+Compiles a piece in `FILE.lisp` and writes its IR to standard output. The piece and the seed are those the root directory's `project.lisp` names, by default `main` and 0; `--entry NAME` and `--seed N` override them. Errors go to standard error as `file:line:column: message`, and the exit status is 1. `--seed N` takes a whole number from 0 to 2⁶⁴ − 1; any other value, or an unknown option, exits with status 2. Warnings about likely audio hazards (loops that grow, very large gains, aliasing frequencies, a buffer written by more than one node) go to standard error and do not change the exit status. The [language reference](../language.md) describes the supported language, and the [standard library](../library.md) describes the instruments and effects written in the language. Imports resolve against `--root`, by default FILE's directory. The IR can be piped to the server:
 
 ```bash
 build/bin/espresso-client --compile examples/wavetable/wavetable.lisp | build/bin/espresso-server --root examples/wavetable --play -
@@ -18,7 +18,7 @@ build/bin/espresso-client --compile examples/wavetable/wavetable.lisp | build/bi
 
 ## The server
 
-`espresso-server` runs the audio engine. Run on its own, without the GUI editor, it is in headless mode: it plays the pieces a client sends, a piece given with `--play`, or renders one offline. In the bundled application, `espresso --headless` runs it with the same options, and its `--play` and `--render` also take a `.lisp` file or a project directory ([The GUI editor](gui-editor.md)). It listens for the client on `127.0.0.1:57190`, validates submitted IR against `schema/ir.schema.json` and the primitive tables, builds plans, and swaps them in with state adoption, crossfades, and beat or bar quantization.
+`espresso-server` runs the audio engine. Run on its own, without the GUI editor, it is in headless mode: it plays the pieces a client sends, a piece given with `--play`, or renders one offline. The GUI editor's executable runs the server as `espresso-editor --headless` with the same options; there, `--play` and `--render` also take a `.lisp` file or a project directory ([The command line](gui-editor.md#the-command-line)). It listens for the client on `127.0.0.1:57190`, validates submitted IR against `schema/ir.schema.json` and the primitive tables, builds plans, and swaps them in with state adoption, crossfades, and beat or bar quantization.
 
 ```bash
 build/bin/espresso-server [--port N] [--device NAME] [--sample-rate R] [--block-size B]
@@ -31,11 +31,11 @@ build/bin/espresso-server --list-devices
 
 | Option | Default | Effect |
 |---|---|---|
-| `--device NAME` | System default | Audio device, as listed by `--list-devices`. On Linux, a name that JACK does not list selects a device of the default type, ALSA |
+| `--device NAME` | System default | Audio device, as listed by `--list-devices`. On Linux, a name that JACK does not list selects an ALSA device |
 | `--sample-rate R` | `48000` | Requested sample rate; the device may choose another |
 | `--block-size B` | `256` | Requested buffer size, in samples |
 | `--inputs N`, `--outputs N` | `2`, `2` | Device channels. Without input permission, the server continues with no inputs. `--outputs 0` runs the engine on the device's clock and writes silence |
-| `--no-audio` | Off | Runs the engine on a timer instead of a device. The timer's thread asks for real-time scheduling, as a device's audio thread has; on Linux this needs an rtprio limit (the `audio` group's, on most distributions), and the server reports when it is refused |
+| `--no-audio` | Off | Runs the engine on a timer instead of a device. The timer's thread asks for real-time scheduling, as a device's audio thread has; on Linux this needs an rtprio limit ([Linux settings](performance.md#linux-settings)), and the server reports when it is refused |
 | `--verbose` | Off | Logs every message but `/counters`, the OSC that pieces send, and the socket receive buffer size |
 | `--play IR_FILE` | None | Plays an IR file at startup as plan −1, until a client swaps in another plan. `-` reads standard input |
 | `--root DIR` | `.` | Project root that buffer files resolve against and that buffer saves are written under |

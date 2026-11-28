@@ -4,7 +4,7 @@ This chapter builds a sine tone, plays it, changes it while it plays, and gives 
 
 ## A project
 
-A project is a folder. Its entry file, `main.lisp`, defines the piece the editor plays. In the GUI editor, File → New Project… → Sine tone makes one in a new folder, under the folder used last or `~/Projects`, and opens it. To make it by hand, create a folder `drift` holding `main.lisp`:
+A project is a folder. Its entry file defines the piece the editors play, and both editors take `main.lisp` as the entry file when the project has one. In the GUI editor, File → New Project… → `sine-tone` makes one in a new folder, under the folder used last or `~/Projects`, and opens it. To make it by hand, create a folder `drift` holding `main.lisp`:
 
 ```lisp
 ;; A sine tone of 440 Hz at -18 dB on both channels.
@@ -31,7 +31,7 @@ The piece builds a graph of four primitives connected by two pipes. The [languag
 
 ## Playing
 
-In the GUI editor, Play, in the top bar and the Play menu, compiles the project and plays it: Ctrl+Shift+Space in every key scheme. Stop (Ctrl+. in the CUA scheme) stops it. The editor starts a server of its own.
+In the GUI editor, Play, in the top bar and the Play menu, compiles the project and plays it: Ctrl+Shift+Space in every key scheme. Stop (F6 in every key scheme) stops it. The editor starts a server of its own.
 
 The terminal editor connects to a server started first, in a terminal of its own:
 
@@ -51,16 +51,18 @@ Without an editor, the client compiles the piece to its intermediate representat
 build/bin/espresso-client --compile drift/main.lisp | build/bin/espresso-server --root drift --play -
 ```
 
-A compile error names the file, line, and column of the form at fault, in the editor's console or on standard error. Misspelling `:freq` as `:frequency` gives:
+A compile error names the file, line, and column of the form at fault. The editor's console names the file by its path in the project; standard error names it by the path the command line gives. Misspelling `:freq` as `:frequency` gives, in the console:
 
 ```text
 main.lisp:8:15: sine-osc has no parameter or port :frequency
   called from main.lisp:5:1
 ```
 
+and, on standard error, `drift/main.lisp:8:15: …` and `called from drift/main.lisp:5:1`.
+
 ## Updating
 
-Change `440hz` to `330hz` while the piece plays, and play it again: Play in the GUI editor, which reads Update while a piece plays, or F5 in the terminal editor. The client compiles the edited project, including unsaved edits, and the server swaps the new graph in without stopping the sound. A node that is unchanged in the new graph keeps its state and plays on; a changed node crossfades from its old version to its new one over the crossfade, 50 ms by default (Preferences → Crossfade in the GUI editor, `:fade` in the terminal editor's settings). A compile that fails leaves the playing piece unchanged.
+Change `440hz` to `330hz` while the piece plays, and play it again: Play in the GUI editor, which reads Update while a piece plays, or F5 in the terminal editor. The client compiles the edited project, including unsaved edits, and the server swaps the new graph in without stopping the sound. A node that is unchanged in the new graph keeps its state and plays on; a changed node crossfades from its old version to its new one over the crossfade, 50 ms by default (Preferences → Crossfade in the GUI editor; the Fade setting, `:fade`, in the terminal editor). A compile that fails leaves the playing piece unchanged.
 
 Every node has an ID derived from its place in the source, so a node keeps its ID, and its state, across edits elsewhere in the file. An update can also wait for the next beat or bar of the server's beat clock (Preferences → Quantize, `:quant`).
 
@@ -92,7 +94,7 @@ and replace `main.lisp` with:
 
 Each `knob` adds a knob to the page and returns a control pipe that holds its value, which a parameter takes in place of a constant. The knob's range and starting value are written once, in any unit of one kind: a frequency knob turns on an exponential scale and shows hertz, a level knob turns on a decibel scale and shows decibels. Until the page sends a value, the pipe holds `:initial`, so the piece plays as written without the page.
 
-Play the piece. The page is at `http://localhost:8000/` in a browser, and the GUI editor shows it in a tab, "Page · drift". The compiler lays the page out: the two knobs in one section of one panel. Each knob's address comes from its label, `/pitch` and `/level`, and stays the same across compiles, so an update keeps the values the knobs were turned to. [Pages](../language.md#pages) in the language reference describes the other controls, the displays, and the groups that lay them out.
+Play the piece. The page is at `http://localhost:8000/` in a browser, and the GUI editor shows it in a tab, `Page · drift`. The compiler lays the page out: the two knobs in one section of one panel. Each knob's address comes from its label, `/pitch` and `/level`, and stays the same across compiles, so an update keeps the values the knobs were turned to. [Pages](../language.md#pages) in the language reference describes the other controls, the displays, and the groups that lay them out.
 
 ## Rendering offline
 
@@ -106,6 +108,6 @@ The same IR and seed render the same file every time. [Playing](playing.md#offli
 
 ## Next
 
-- The [standard library](../library.md) holds instruments, effects, and modulators written in the language; the GUI editor's MIDI instrument template plays one from a MIDI keyboard.
+- The [standard library](../library.md) holds instruments, effects, and modulators written in the language; the GUI editor's `midi-instrument` template plays one from a MIDI keyboard.
 - The examples, in `examples/`, are complete pieces, from drones to a band of clip loops; `examples/README.md` describes each and how to run it, and the GUI editor's File → Open Example… copies one to a folder of its own.
 - [Playing](playing.md) describes the compiler's and the server's options.

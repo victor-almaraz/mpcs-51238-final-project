@@ -182,7 +182,19 @@ An effect runs as many channels as the pipe it writes: its inner pipes take that
 
 The library's controls: every effect's `:mix`; `echo`'s `:feedback` and `:damping`; `chorus`'s `:rate`; `reverb`'s `:damping`; `overdrive`'s `:drive`, `:tone`, and `:level`; `spectral-delay`'s `:time`, `:spread`, and `:feedback`; `freeze`'s `:hold`, as a toggle; `granular-delay`'s `:density`, `:duration`, `:jitter`, `:pitch`, and `:pitch-jitter`. The other slots are fixed when the effect is built or are used in arithmetic that takes no pipe, so they have none: `echo`'s `:time`, `chorus`'s `:delay` and `:depth`, `reverb`'s `:size`, `granular-delay`'s `:time`, `:length`, and `:record`, `spectral-delay`'s `:shape` and `:max-time`, `freeze`'s `:fade`, and the FFT sizes.
 
-Each slot of the library classes has an accessor named after its initarg, except these: `effect`'s `:mix` has `wet-mix`, as `mix` is a primitive; `instrument`'s `:voices`, `voice-count`; `sampler`'s `:buffer`, `:start`, and `:loop`, `sample-buffer`, `sample-start`, and `loop-mode`; `granular-delay`'s `:length`, `ring-length`; `lfo-mod`'s `:shape` and `:phase`, `lfo-shape` and `lfo-phase`; `envelope-mod`'s `:notes`, `envelope-notes`; `follower`'s `:in` and `:time`, `followed` and `follow-time`. Accessors are generic functions shared by the classes that have a slot of the name: `(cutoff s)` reads a `subtractive`'s cutoff, `(damping e)` an `echo`'s or a `reverb`'s damping, and `(set! (cutoff s) 600hz)` changes a cutoff before `play` builds the voices.
+Each slot of the library classes has an accessor named after its initarg, except these:
+
+| Class | Initarg | Accessor |
+|---|---|---|
+| `effect` | `:mix` | `wet-mix`, as `mix` is a primitive |
+| `instrument` | `:voices` | `voice-count` |
+| `sampler` | `:buffer`, `:start`, `:loop` | `sample-buffer`, `sample-start`, `loop-mode` |
+| `granular-delay` | `:length` | `ring-length` |
+| `lfo-mod` | `:shape`, `:phase` | `lfo-shape`, `lfo-phase` |
+| `envelope-mod` | `:notes` | `envelope-notes` |
+| `follower` | `:in`, `:time` | `followed`, `follow-time` |
+
+Accessors are generic functions shared by the classes that have a slot of the name: `(cutoff s)` reads a `subtractive`'s cutoff, `(damping e)` an `echo`'s or a `reverb`'s damping, and `(set! (cutoff s) 600hz)` changes a cutoff before `play` builds the voices.
 
 ## std/modulators
 
@@ -217,7 +229,7 @@ A modulator is an instance of a subclass of `modulator`: a source of a control s
 | `step-mod` | `:rate` | 4 Hz | Steps a second, 0.1 to 30 Hz on its knob |
 | | `:steps` | `[0 0.5 1 0.5]` | The values, each 0 to 1, in turn, the first from the start |
 | `envelope-mod` | `:notes` | | The event pipe whose notes start it; required |
-| | `:attack`, `:decay`, `:sustain`, `:release` | 10 ms, 300 ms, 0.5, 500 ms | Rises over the attack at each note, falls over the decay to the sustain while it is held, and over the release after it; unipolar. Knobs of 1 ms to 4 s, 5 ms to 8 s, a percentage, and 5 ms to 8 s |
+| | `:attack`, `:decay`, `:sustain`, `:release` | 10 ms, 300 ms, 0.5, 500 ms | Rises over the attack at each note, falls over the decay to the sustain while it is held, and over the release after it. Unipolar. Knobs: attack 1 ms to 4 s; decay and release 5 ms to 8 s; sustain a percentage |
 | `follower` | `:in` | | The audio pipe whose level it follows, its first channel; required |
 | | `:time` | 50 ms | How fast it follows; fixed when the signal is built; unipolar |
 

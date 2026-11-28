@@ -1,6 +1,6 @@
 # Live data APIs
 
-Public sources of live data that a piece reads with `web-in`, `web-stream`, or `web-socket`, without an account or a key. Each entry gives the endpoint, what it carries, and a call that reads it. Every endpoint answers JSON, and a field is a JSON Pointer into it ([Web data](../language.md#web-data)). Each provider's documentation states its terms and limits; a piece polls no faster than its data changes.
+Public sources of live data that a piece reads with `web-in`, `web-stream`, or `web-socket`, without an account or a key. Each entry gives the endpoint, what it carries, and a call that reads it. Every endpoint answers JSON, and a field is a JSON Pointer into it ([Web data](../language.md#web-data)). Each provider's documentation states its terms and limits. Poll no faster than the data changes.
 
 | API | Carries | Primitive | Example |
 |---|---|---|---|
@@ -20,7 +20,7 @@ Current conditions for a latitude and longitude: temperature, wind, precipitatio
 (web-in :url forecast :every 60s :fields ["/current/temperature_2m" "/current/wind_speed_10m"] :value weather)
 ```
 
-`weather` is a control pipe of two channels: degrees Celsius and kilometres an hour.
+`weather` is a control pipe of two channels: degrees Celsius and km/h.
 
 ## USGS earthquakes
 
@@ -68,4 +68,4 @@ A WebSocket of the Bluesky network's public activity, filtered by the collection
             :out posts)
 ```
 
-Each post sends an event on `posts`.
+Each message on the stream sends an event on `posts`; Jetstream's documentation describes the kinds of message the collection filter passes.

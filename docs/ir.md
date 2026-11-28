@@ -1,6 +1,6 @@
 # IR format
 
-The intermediate representation (IR) describes a graph of primitives: the pipes it declares and its nodes in execution order. The interpreter emits IR; the server validates it and builds a plan from it. `schema/ir.schema.json` defines the structure. The primitive tables in `src/metadata/primitiveSpec.cpp` define the types, parameters, and ports. The tables carry the metadata version, 0.9.0 (`include/espresso/metadata/version.h`), which the server prints at startup and with `--version`.
+The intermediate representation (IR) describes a graph of primitives: the pipes it declares and its nodes in execution order. The interpreter emits IR; the server validates it and builds a plan from it. `schema/ir.schema.json` defines the structure. The primitive tables in `src/metadata/primitiveSpec.cpp` define the types, parameters, and ports. The metadata version, 0.9.0 (`include/espresso/metadata/version.h`), names the tables' revision; the server prints it at startup and with `--version`.
 
 All values are canonical units: seconds, hertz, linear amplitude, semitones, and beats.
 
@@ -157,7 +157,7 @@ The server rejects IR nested more than 64 levels deep, and IR that does not matc
 - An `adsr` with an `in` input writes an audio pipe.
 - A `wavetableOsc`'s `table-size`, and an `fft`'s `size` and `overlap`, are powers of two.
 - A serial node's `baud` is a standard rate: 9600, 19200, 38400, 57600, 115200, 230400, 460800, or 921600.
-- A web node's `url` has its type's scheme: `ws://` or `wss://` for `webSocket`, `http://` or `https://` for the others. It has at most 8 `fields`, and, with a `value` pipe, one per channel of that pipe. Each of its `headers` is `Name: value`. A `webOut` with a `value` input has `fields`.
+- A web node's `url` has its type's scheme: `ws://` or `wss://` for `webSocket`, `http://` or `https://` for the others. It has at most 8 `fields`, and, when it has `fields` and a `value` pipe, one per channel of that pipe. Each of its `headers` is `Name: value`. A `webOut` with a `value` input has `fields`.
 - A `clipPlayer`'s `bank` is lowercase letters, digits, and hyphens, and no other `clipPlayer` plays it.
 
 A layout's elements are checked against their kinds (Page layout); an error names the element's path, such as `layout: page > panel "Synth" > section "Filter" > knob "Q"`. Each error names the failing node and, when present, its `src` location:

@@ -80,15 +80,22 @@ endif()
 # docs/.
 if(TARGET manual-xml)
     set(ESPRESSO_SITE_DIR "${PROJECT_BINARY_DIR}/site")
+    # The fonts come with the editor's web packages; without the editor, the
+    # page's style falls back to the system's fonts.
     set(ESPRESSO_EDITOR_FONTS "${PROJECT_SOURCE_DIR}/src/apps/editor/web/vendor/fonts")
+    set(fonts "")
+    if(ESPRESSO_BUILD_EDITOR)
+        set(fonts
+            COMMAND "${CMAKE_COMMAND}" -E make_directory "${ESPRESSO_SITE_DIR}/fonts"
+            COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${ESPRESSO_EDITOR_FONTS}/NotoSans.ttf"
+                    "${ESPRESSO_EDITOR_FONTS}/NotoSans-OFL.txt" "${ESPRESSO_EDITOR_FONTS}/JetBrainsMono.ttf"
+                    "${ESPRESSO_EDITOR_FONTS}/JetBrainsMono-OFL.txt" "${ESPRESSO_SITE_DIR}/fonts")
+    endif()
     add_custom_target(site
         COMMAND "${CMAKE_COMMAND}" -E rm -rf "${ESPRESSO_SITE_DIR}"
         COMMAND "${CMAKE_COMMAND}" -E copy_directory "${PROJECT_SOURCE_DIR}/site" "${ESPRESSO_SITE_DIR}"
         COMMAND "${CMAKE_COMMAND}" -E copy_directory "${PROJECT_BINARY_DIR}/docs/html" "${ESPRESSO_SITE_DIR}/docs"
-        COMMAND "${CMAKE_COMMAND}" -E make_directory "${ESPRESSO_SITE_DIR}/fonts"
-        COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${ESPRESSO_EDITOR_FONTS}/NotoSans.ttf"
-                "${ESPRESSO_EDITOR_FONTS}/NotoSans-OFL.txt" "${ESPRESSO_EDITOR_FONTS}/JetBrainsMono.ttf"
-                "${ESPRESSO_EDITOR_FONTS}/JetBrainsMono-OFL.txt" "${ESPRESSO_SITE_DIR}/fonts"
+        ${fonts}
         COMMENT "Assembling the web site in ${ESPRESSO_SITE_DIR}"
         VERBATIM)
     add_dependencies(site manual)

@@ -28,7 +28,7 @@ cd src/apps/editor/src-tauri
 cargo tauri dev
 ```
 
-The build fetches the web packages, writes `web/index.html`, and places the client and the server in `src-tauri/binaries/`. `cargo tauri dev` builds the Rust and opens the window. `cargo tauri build` builds the release executable, `espresso`; `cargo build` builds `target/debug/espresso-editor`. Whether `cargo tauri build` also makes an installable bundle depends on `bundle.active`, which the committed `tauri.conf.json` sets to false.
+The build fetches the web packages, writes `web/index.html`, and places the client and the server in `src-tauri/binaries/`. `cargo tauri dev` builds the Rust and opens the window. `cargo tauri build` builds `target/release/espresso-editor`, and `cargo build` builds `target/debug/espresso-editor`. The committed `tauri.conf.json` sets `bundle.active` to false, so `cargo tauri build` makes no installable bundle.
 
 `cargo test` in `src-tauri/` checks the starting and stopping of the server against the build tree's `build/bin/espresso-server`, or the one `ESPRESSO_SERVER` names, and headless mode against the client and server Tauri places beside the built executable.
 

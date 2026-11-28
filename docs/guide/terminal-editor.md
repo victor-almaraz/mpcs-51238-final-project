@@ -6,13 +6,13 @@ The terminal editor is the client run in a terminal, without the GUI editor. It 
 build/bin/espresso-client [--settings FILE] [--port N] [PROJECT_DIR [FILE...]]
 ```
 
-The editor opens `PROJECT_DIR`, by default the current directory, and each `FILE`, by its path in the project; without a `FILE`, it opens the project's `main.lisp` when there is one, else an empty `*scratch*` buffer. `--settings FILE` reads and writes the settings in `FILE` (Settings), and `--port N` reaches the server on port `N`, from 1 to 65535. A `PROJECT_DIR` that is not a directory, or an unknown option, exits with status 2; `--help` prints the usage and `--version` the version. Quitting exits with status 0.
+The editor opens `PROJECT_DIR`, by default the current directory, and each `FILE`, by its path in the project; without a `FILE`, it opens the project's `main.lisp` when there is one, else an empty `*scratch*` buffer. `--settings FILE` reads and writes the settings in `FILE` ([Settings](#settings)), and `--port N` reaches the server on port `N`, from 1 to 65535. A `PROJECT_DIR` that is not a directory, or an unknown option, exits with status 2; `--help` prints the usage and `--version` the version. Quitting exits with status 0.
 
 ## The screen
 
 | Part | Holds |
 |---|---|
-| Header bar | ▶ Play and ■ Stop; the current file's name, with `•` while it has unsaved changes, and the project's folder; the fade and quantize fields; ≡, the main menu; ×, which quits |
+| Header bar | ▶ Play and ■ Stop; the current file's name, with `•` while it has unsaved changes, and the project's folder; the Fade and Quantize fields; ≡, the main menu; ×, which quits |
 | File list | The project's files as one list of paths; a click opens one. Its divider drags to resize it |
 | Tabs | One tab a buffer, `•` after the name of one with unsaved changes; × closes a tab and + opens a file |
 | Code | The buffer, with line numbers, syntax highlighting, and the bracket that matches the one at the cursor in bold |
@@ -46,12 +46,12 @@ Closing a tab with unsaved changes asks: Cancel (Esc), Discard (D), or Save (Ent
 | Command | Effect |
 |---|---|
 | Play (▶, F5) | Compiles the project and plays it, or updates the playing piece |
-| Stop (■, F6) | Stops the piece, fading it out over the fade |
+| Stop (■, F6) | Stops the piece, fading it out over the crossfade |
 | Evaluate Form (F8) | Checks the syntax of the form that ends at or before the cursor, then compiles and plays the project as Play does |
 
-Play compiles the project's `.lisp` files, each open file's unsaved text in place of its file. The entry file is `main.lisp`; else the file being edited; else the only `.lisp` file other than `project.lisp`. A compile that fails leaves the playing piece unchanged; its errors appear in the console, which opens, and the message line reads "Errors found — see the console". A console message with a place in the project, such as an error, a warning, or a `called from` line, is underlined, and a click opens the file at that line and column.
+Play compiles the project's `.lisp` files, each open file's unsaved text in place of its file. The entry file is `main.lisp`; else the file being edited; else the only `.lisp` file other than `project.lisp`. A compile that fails leaves the playing piece unchanged; its errors appear in the console, which opens, and the message line reads `Errors found — see the console`. A console message with a place in the project, such as an error, a warning, or a `called from` line, is underlined, and a click opens the file at that line and column.
 
-The header's fade field sets the crossfade of a swap: a click prompts for a duration, such as `50ms` (a plain number is in milliseconds), and the wheel changes it by 10 ms. The quantize field delays a swap to the next beat or bar of the server's beat clock: None, Beat, or Bar. With Rebuild on Save, each save plays the project.
+The header's Fade field sets the crossfade of a swap: a click prompts for a duration, such as `50ms` (a plain number is in milliseconds), and the wheel changes it by 10 ms. The Quantize field delays a swap to the next beat or bar of the server's beat clock: None, Beat, or Bar. With Rebuild on Save, each save plays the project.
 
 At startup the client sends the server `/hello`. While the server does not answer, the client tries again every second, in the background; the console reports the first failure and the connection, and nothing for the attempts between them. A server that sends nothing for 1.5 seconds is reported lost, and the client tries it again the same way.
 
@@ -110,7 +110,7 @@ The key scheme is set in Preferences or in the settings file: `emacs` (the defau
 | Find…, Find Backward… | C-s, C-r | Ctrl+F, Ctrl+R | `/`, `?` | Ctrl+W, Ctrl+Q |
 | Find Next, Previous | | F3, Shift+F3 | `n`, `N` | Alt+W, Alt+Q |
 | Play, Stop | C-c C-c, C-c C-s | F5, F6 | `:play`, `:stop` | F5, F6 |
-| Evaluate Form | C-x C-e | Ctrl+E | C-x C-e | Alt+R |
+| Evaluate Form | C-x C-e | Ctrl+E | `:eval`, Ctrl+X Ctrl+E | Alt+R |
 | Show File List, Console | C-c f, C-c o | F7, F9 | `:filelist`, `:console` | F7, F9 |
 | Preferences | C-c , | | `:set` | |
 | Cancel | C-g | Esc | Esc | Ctrl+C |
@@ -125,7 +125,7 @@ Preferences, in the main menu, apply as they change and write the settings file.
 |---|---|---|
 | Appearance | Theme | `:theme` |
 | Keyboard | Key Bindings | `:keys` |
-| Playback | Fade, in steps of 10 ms | `:fade` |
+| Playback | Fade: the crossfade, in steps of 10 ms | `:fade` |
 | Playback | Quantize | `:quant` |
 | Playback | Rebuild on Save | `:rebuild-on-save` |
 | Layout | Show File List | `:file-list` |

@@ -23,6 +23,8 @@ Save as `main.lisp`:
 ```lisp
 ;; A drum machine that loops the first clip of the bank clips/drums/ at 112 BPM.
 
+(module main)
+
 (import "std/instruments")
 
 (defpiece main ()
@@ -51,6 +53,8 @@ Replace `main.lisp` with:
 
 ```lisp
 ;; A drum machine that loops the clips of clips/drums/, chosen on the page.
+
+(module main)
 
 (import "std/instruments")
 
@@ -83,6 +87,8 @@ Replace `main.lisp` with:
 ;; plucked bass, a synth pad, and a drum machine, each through an effect
 ;; chain into a master chain. A tab for each instrument, and one for the
 ;; loops and the master chain.
+
+(module main)
 
 (import "std/instruments")
 (import "std/effects")
@@ -129,4 +135,4 @@ Play the piece. The bass, the pad, and the drums start on their first clips; a p
 
 - [Controls in the language](../language.md#controls-in-the-language) describes the other controls, groups, and tabs, and [Pages](../language.md#pages) the page port's requests, among them the bank listing and clip upload.
 - The [standard library](../library.md) lists the instruments and effects, their controls, and how to write a class of either.
-- `examples/autoband/` plays this band with four instruments; `examples/README.md` describes it and how to run it.
+- `examples/README.md` describes `examples/autoband/` and how to run it.

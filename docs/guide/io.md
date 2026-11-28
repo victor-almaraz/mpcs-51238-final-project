@@ -6,7 +6,7 @@ A piece reads and writes the world through its sources and sinks: audio and MIDI
 
 The server opens one audio device at startup: the system's default, or the one `--device NAME` names, with the sample rate, block size, and channel counts its options request ([Playing](playing.md#the-server)). `espresso-server --list-devices` lists the devices of each type, and the line the server prints at startup names the type and the device it opened.
 
-On Linux the server opens its audio device through JACK: PipeWire's JACK interface (`pipewire-jack`) or a JACK server, which runs the device callback on a real-time thread. When no JACK server lists a device, the server reports it and opens the device through ALSA, whose callback thread runs without real-time priority. A name that JACK does not list selects an ALSA device. JACK and PipeWire list the server as the client `espresso-server`, so `pw-top` shows its load and xruns.
+On Linux the server opens its audio device through JACK: PipeWire's JACK interface (`pipewire-jack`) or a JACK server, which runs the device callback on a real-time thread. When no JACK server lists a device, the server reports it and opens the device through ALSA, whose callback thread runs without real-time priority. A `--device` name that JACK does not list selects an ALSA device. JACK and PipeWire list the server as the client `espresso-server`, so `pw-top` shows its load and xruns.
 
 On macOS the server uses Core Audio. Audio input needs microphone permission for the terminal application (System Settings › Privacy & Security › Microphone); without it, the server runs with no inputs.
 
@@ -14,11 +14,11 @@ On macOS the server uses Core Audio. Audio input needs microphone permission for
 
 ## MIDI
 
-`midi-in` and `midi-out` select a device by a case-insensitive substring of its name, given as `:device`; an empty `:device` matches every device. MIDI inputs are opened as they appear, so a keyboard plugged in while a piece plays is heard at once.
+`midi-in` and `midi-out` select a device by a case-insensitive substring of its name, given as `:device`; an empty `:device` matches every device. The server looks for new MIDI devices every 2 seconds, so a keyboard plugged in while a piece plays is heard within 2 seconds.
 
 ## OSC
 
-`osc-in` and `osc-out` send and receive OSC over UDP on `127.0.0.1`, on the ports a piece names. Another program on the same machine, such as a controller application, talks to a piece through them.
+`osc-in` and `osc-out` receive and send OSC over UDP on `127.0.0.1`, on the ports a piece names. Another program on the same machine, such as a controller application, talks to a piece through them.
 
 ## Serial devices
 

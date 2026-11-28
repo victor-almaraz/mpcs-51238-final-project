@@ -1,6 +1,15 @@
 # C++ API
 
-The C++ API is the public headers in `include/espresso/`, one namespace per module. Each section below lists one namespace's declarations, drawn from the headers' Doxygen comments.
+The C++ API is the public headers in `include/espresso/`: one namespace per module, and namespace `espresso` for the project-wide thread type. Each section below lists one namespace's declarations, drawn from the headers' Doxygen comments.
+
+## espresso
+
+`espresso::jthread`, the self-joining thread type of every thread in the project, its stop token, and the stack size of every thread, declared in `include/espresso/protocol/jthread.h`.
+
+```{doxygennamespace} espresso
+:members:
+:undoc-members:
+```
 
 ## metadata
 

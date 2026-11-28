@@ -9,9 +9,11 @@
 #include <cstddef>
 #include <filesystem>
 #include <fstream>
+#include <initializer_list>
 #include <iomanip>
 #include <ios>
 #include <iterator>
+#include <optional>
 #include <set>
 #include <span>
 #include <sstream>
@@ -75,6 +77,7 @@ std::string quantity(dimension d, double v) {
         return v != 0.0 && std::abs(v) < 1.0 ? number(v * 1000.0) + " ms" : number(v) + " s";
     case dimension::frequency: return number(v) + " Hz";
     case dimension::level:
+        if (v == 0.0) return "silence";
         return v > 0.0 ? number(std::round(20.0 * std::log10(v) * 100.0) / 100.0) + " dB" : number(v);
     case dimension::interval: return number(v) + " st";
     case dimension::beats: return number(v) + (v == 1.0 ? " beat" : " beats");
@@ -96,9 +99,32 @@ std::string defaultOf(const paramSpec& p) {
     if (p.required) return "required";
     if (isNumeric(p.dim)) return quantity(p.dim, p.defaultValue);
     if (p.dim == dimension::choice || p.dim == dimension::text) {
-        return p.defaultText.empty() ? "" : "`" + std::string(p.defaultText) + "`";
+        if (p.defaultText.empty()) return "";
+        return (p.dim == dimension::choice ? "`:" : "`") + std::string(p.defaultText) + "`";
     }
     return "";
+}
+
+std::string valuesOf(const paramSpec& p);
+
+// The constraint of @p s of kind @p kind on parameter @p param, if there is one.
+std::optional<constraint> ruleOn(const primitiveSpec& s, rule kind, std::string_view param) {
+    for (const constraint& c : s.constraints) {
+        if (c.kind == kind && c.param == param) return c;
+    }
+    return std::nullopt;
+}
+
+std::string valuesOf(const primitiveSpec& s, const paramSpec& p) {
+    if (const auto only = ruleOn(s, rule::oneOf, p.name)) {
+        std::string out;
+        for (const double v : only->values) out += (out.empty() ? "" : ", ") + quantity(p.dim, v);
+        return out;
+    }
+    std::string range = valuesOf(p);
+    if (ruleOn(s, rule::powerOfTwo, p.name)) range += range.empty() ? "a power of two" : ", a power of two";
+    if (p.pagePort) range += ", or `:page`";
+    return range;
 }
 
 std::string valuesOf(const paramSpec& p) {
@@ -115,6 +141,60 @@ std::string valuesOf(const paramSpec& p) {
     if (low) return "from " + quantity(p.dim, p.min);
     if (high) return "up to " + quantity(p.dim, p.max);
     return "";
+}
+
+std::string names(std::span<const std::string_view> list, std::string_view joiner) {
+    std::string out;
+    for (std::size_t i = 0; i < list.size(); ++i) {
+        if (i > 0) out += i + 1 == list.size() ? std::string(joiner) : ", ";
+        out += "`:" + std::string(list[i]) + "`";
+    }
+    return out;
+}
+
+// A sentence for each constraint the parameter table does not show.
+std::string requirements(const primitiveSpec& s) {
+    std::string out;
+    const auto add = [&out](std::initializer_list<std::string_view> parts) {
+        out += ' ';
+        for (const std::string_view part : parts) out += part;
+    };
+    for (const constraint& c : s.constraints) {
+        const std::string param = "`:" + std::string(c.param) + "`";
+        const std::string first = c.ports.empty() ? "" : "`:" + std::string(c.ports[0]) + "`";
+        switch (c.kind) {
+        case rule::anyInput: add({"One of the inputs ", names(c.ports, " or "), " is bound."}); break;
+        case rule::anyOutput: add({"One of the outputs ", names(c.ports, " or "), " is bound."}); break;
+        case rule::entryPerPipe:
+            add({param, ", when it has entries, has one for each pipe of ", first, "."});
+            break;
+        case rule::notEmpty: add({param, " has an entry."}); break;
+        case rule::channels:
+            add({first, ", when bound, has a pipe of at least ", std::to_string(c.count), " channels."});
+            break;
+        case rule::audioWith: add({"With ", first, " bound, `:", c.ports[1], "` is an audio pipe."}); break;
+        case rule::textWith: add({"With ", first, " bound, ", param, " is not empty."}); break;
+        case rule::scheme: {
+            std::string schemes;
+            for (std::size_t i = 0; i < c.names.size(); ++i) {
+                if (i > 0) schemes += i + 1 == c.names.size() ? " or " : ", ";
+                schemes += '`';
+                schemes += c.names[i];
+                schemes += '`';
+            }
+            add({param, " starts with ", schemes, "."});
+            break;
+        }
+        case rule::atMost: add({param, " has at most ", std::to_string(c.count), " entries."}); break;
+        case rule::headers: add({"Each entry of ", param, " is a request header, `Name: value`."}); break;
+        case rule::entryPerChannel:
+            add({param, ", when it has entries, has one for each channel of ", first, ", when bound."});
+            break;
+        case rule::powerOfTwo:
+        case rule::oneOf: break;  // in the Values column
+        }
+    }
+    return out;
 }
 
 std::string portLine(const portSpec& port) {
@@ -149,7 +229,9 @@ std::string reference() {
            "constant, "
            "written in any unit of its dimension, or, where the table names pipe kinds, a pipe of one of "
            "those kinds. "
-           "Defaults and ranges are in the units shown; levels are shown in decibels. Ports connect pipes: "
+           "Defaults and ranges are in the units shown; levels are shown in decibels, and a level of 0 as "
+           "silence. A time parameter that takes control pipes also takes a beat value, which follows the "
+           "tempo. Ports connect pipes: "
            "inputs "
            "read them and outputs write them. The [language reference](../language.md) describes what the "
            "primitives "
@@ -162,12 +244,12 @@ std::string reference() {
             const primitiveSpec& s = spec->get();
             out << "\n### " << interpreter::languageName(type) << "\n\n"
                 << "IR type `" << type << "`, a " << roleName(s.kind) << ". Inputs: " << ports(s.inputs)
-                << ". Outputs: " << ports(s.outputs) << ".\n";
+                << ". Outputs: " << ports(s.outputs) << "." << requirements(s) << "\n";
             if (s.params.empty()) continue;
             out << "\n| Parameter | Dimension | Default | Values | Pipes |\n|---|---|---|---|---|\n";
             for (const paramSpec& p : s.params) {
                 out << "| `:" << p.name << "` | " << toString(p.dim) << " | " << defaultOf(p) << " | "
-                    << valuesOf(p) << " | " << kinds(p.bindable) << " |\n";
+                    << valuesOf(s, p) << " | " << kinds(p.bindable) << " |\n";
             }
         }
     }

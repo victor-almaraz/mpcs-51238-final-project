@@ -21,7 +21,7 @@ A piece is a Lisp file whose entry piece, defined with `defpiece`, builds a grap
 
 The editor plays `main.lisp`; without one, it plays the file being edited. The piece named `main` is built unless another entry is given (`espresso-client --compile FILE --entry NAME`).
 
-A project is a directory of files. `import` paths are relative to the project root, with `.lisp` implied, and neither begin with `/` nor contain `..`: `(import "util/scales")` loads `util/scales.lisp`. Paths that begin with `std/` name the standard library, which is compiled into the client and which no project file replaces; [Standard library](library.md) describes it. The editor imports its open buffers, saved or not; `espresso-client --compile` reads files under `--root`, by default the compiled file's directory. `module` and `import` are top-level forms.
+A project is a directory of files. `import` paths are relative to the project root, with `.lisp` implied; a path neither begins with `/` nor contains `..`. `(import "util/scales")` loads `util/scales.lisp`. Paths that begin with `std/` name the standard library, which is compiled into the client and which no project file replaces; [Standard library](library.md) describes it. The editor imports its open buffers, saved or not; `espresso-client --compile` reads files under `--root`, by default the compiled file's directory. `module` and `import` are top-level forms.
 
 A file with an `export` clause exports the names it lists; a file without one exports every top-level binding it defines, and none that it imports. `:only` binds the listed names, each of which must be exported. `:as` binds each name as `prefix/name`. Each file is evaluated once per compilation, at its first import; later imports bind its exports again. An import cycle is an error that lists the files in the cycle. Classes and generic functions are global, whichever file defines them.
 
@@ -543,7 +543,7 @@ A page lays out its controls on a grid of one unit, `--es-u`, 24 pixels by defau
 | `es-footswitch` | 3 × 3 |
 | `es-drawbar` | 2 × 6 |
 | `es-screen` | 3 × 2 on a drawn page |
-| `es-clips` | 6 plus 4 per slot × 2 on a drawn page |
+| `es-clips` | (6 + 4 × slots) × 2 on a drawn page |
 
 A control sits centred in its footprint; any other child fills one unit unless its `span` says otherwise.
 
@@ -621,13 +621,13 @@ A call to a generic function is one step of the instance path, named for the gen
 
 Each node's ID is its file, the entry piece, and its instance path: the named function calls from the piece to the primitive call, each written `callee@line:column#n`. `n` counts calls from the same place under the same parent, so the eight voices built by one `map` are numbered 0 to 7. Calls to anonymous functions add no step.
 
-The reserved argument `:key` replaces the count: `(voice f out :key 'bass)`. Keys keep each node's ID, and so its state across swaps, when the items of a `map` are reordered. A keyed call to an anonymous function adds a step named `fn`. Two calls to the same function under the same parent with the same key are an error. A key is a symbol, string, keyword, or integer. `:key` names what a call makes, so it is accepted on calls of functions, generic functions, primitives, `mapper`, `buffer`, and the page's functions, and on operations on pipes inside a mapper; on any other builtin, or on a call made outside a piece build, it is an error.
+The reserved argument `:key` replaces the count: `(voice f out :key 'bass)`. Keys keep each node's ID, and so its state across swaps, when the items of a `map` are reordered. A keyed call to an anonymous function adds a step named `fn`. Two calls to the same function under the same parent with the same key are an error. A key is a symbol, string, keyword, or integer. `:key` names what a call makes, so it is accepted on calls of functions, generic functions, primitives, `mapper`, `buffer`, and the page's functions, and on a call of any other builtin given a pipe argument; on any other builtin call, or on a call made outside a piece build, it is an error.
 
 A keyword argument given twice in one call, including `:key` and the options of `pipe`, is an error at its second occurrence.
 
 ## Errors
 
-Errors stop the compilation and leave the running piece unchanged. Each names the file, line, and column of the value or innermost form at fault, and the calls that led to it. Parameter values are checked at the call against their dimension, range, and the pipe types they accept, a value out of range being reported in hertz, seconds (milliseconds below 1 s), decibels, semitones, or beats, whatever unit it was written in; ports are checked for their pipe types and required bindings.
+Errors stop the compilation and leave the running piece unchanged. Each names the file, line, and column of the value or innermost form at fault, and the calls that led to it. Parameter values are checked at the call against their dimension, range, and the pipe types they accept, a value out of range being reported in its dimension's unit, whatever unit it was written in: hertz, seconds (milliseconds below 1 s), decibels (a level of 0 or below as a plain number), semitones, or beats; ports are checked for their pipe types and required bindings.
 
 ```text
 main.lisp:2:19: parameter :freq expects a frequency, got a time

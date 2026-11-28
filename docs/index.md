@@ -26,3 +26,10 @@ reference/primitives
 ir
 reference/cpp
 ```
+
+```{toctree}
+:caption: Resources
+:maxdepth: 1
+
+resources/data-apis
+```

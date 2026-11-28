@@ -294,6 +294,15 @@ void clipBanks::collect() {
 
 namespace {
 
+// The first multiple of `grid` at or after `beats`, and the last at or
+// before it; a beat position within beatTolerance of a line is on it.
+double lineAtOrAfter(double beats, double grid) noexcept {
+    return std::ceil((beats - beatTolerance) / grid) * grid;
+}
+double lineAtOrBefore(double beats, double grid) noexcept {
+    return std::floor((beats + beatTolerance) / grid) * grid;
+}
+
 // Plays bank `bank`'s clip in slot `select`, from 0 (none below 0 or past
 // `slots`), as notes on `out`. A change of slot waits for the next grid
 // line, a multiple of `grid` beats on the beat clock, the clip playing
@@ -353,7 +362,7 @@ public:
         // clock, a running sum, reaches a line on a block's start a hair late.
         if (fresh_ && start(from, wanted, ctx.meter)) from = std::max(launch_, from - beatTolerance);
         if (wanted != playing_) {
-            const double line = std::ceil((from - beatTolerance) / grid_) * grid_;
+            const double line = lineAtOrAfter(from, grid_);
             if (line < end) {
                 play(from, line, offset);
                 endDue(line, offset);
@@ -409,7 +418,7 @@ private:
         } else if (wanted >= 0) {
             fresh_ = false;
             playing_ = wanted;
-            launch_ = std::floor((from + beatTolerance) / grid_) * grid_;
+            launch_ = lineAtOrBefore(from, grid_);
             meter_ = std::max(1, meter);
             return true;
         }
@@ -427,7 +436,7 @@ private:
         // In bars of the meter it started in, so a change of meter keeps a
         // playing loop on its grid; the next clip takes the new one.
         const double bar = meter_;
-        const double length = std::max(1.0, std::ceil((playingClip.length - beatTolerance) / bar)) * bar;
+        const double length = std::max(bar, lineAtOrAfter(playingClip.length, bar));
         const auto first = static_cast<std::int64_t>(std::floor((from - launch_) / length));
         // The passes the block spans, a loop at least a beat long: a fixed
         // bound past any tempo and block the engine runs.

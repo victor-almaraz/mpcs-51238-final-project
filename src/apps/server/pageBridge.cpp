@@ -533,31 +533,30 @@ void pageBridge::readFrom(connection& c) {
         // Bytes after an upgrade are the socket's first frames.
         if (c.kind == connection::mode::socket) frames(c, c.reader.takeRest());
     }
-    if (c.kind != connection::mode::http) {
-        // A stream or socket whose peer finished sending with its request
-        // is sent its head, then closed: it is not read again.
-        if (c.ended) c.closing = true;
-        return;
-    }
-    if (c.draining) {
-        // Closed once its sender has sent it all, so it reads the refusal.
-        if (c.reader.skipping() == 0) c.closing = true;
-    } else if (const auto error = c.reader.error(); error != requestError::none && !c.closing) {
-        c.closing = true;
-        switch (error) {
-        case requestError::lengthRequired: refuse(c, 411, "a body needs Content-Length"); break;
-        case requestError::tooLarge:
-            refuse(c, 413, "the body is larger than 64 KiB, or 1 MiB for a clip");
-            if (c.reader.skipping() > 0 && c.reader.skipping() <= maxDrainedBody) {
-                c.closing = false;
-                c.draining = true;
+    if (c.kind == connection::mode::http) {
+        if (c.draining) {
+            // Closed once its sender has sent it all, so it reads the refusal.
+            if (c.reader.skipping() == 0) c.closing = true;
+        } else if (const auto error = c.reader.error(); error != requestError::none && !c.closing) {
+            c.closing = true;
+            switch (error) {
+            case requestError::lengthRequired: refuse(c, 411, "a body needs Content-Length"); break;
+            case requestError::tooLarge:
+                refuse(c, 413, "the body is larger than 64 KiB, or 1 MiB for a clip");
+                if (c.reader.skipping() > 0 && c.reader.skipping() <= maxDrainedBody) {
+                    c.closing = false;
+                    c.draining = true;
+                }
+                break;
+            case requestError::headersTooLarge:
+                refuse(c, 431, "the request head is larger than 16 KiB");
+                break;
+            default: refuse(c, 400, "not an HTTP/1.1 request"); break;
             }
-            break;
-        case requestError::headersTooLarge: refuse(c, 431, "the request head is larger than 16 KiB"); break;
-        default: refuse(c, 400, "not an HTTP/1.1 request"); break;
         }
     }
-    // A peer that has finished sending is answered, then closed.
+    // A peer that has finished sending is answered, then closed: a stream or
+    // socket whose request came with its end is sent its head, not read again.
     if (c.ended) {
         c.closing = true;
         c.draining = false;

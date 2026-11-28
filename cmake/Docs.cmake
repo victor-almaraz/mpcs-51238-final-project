@@ -1,17 +1,27 @@
-# The docs target builds the API reference with Doxygen: HTML into
-# docs/api/, which is committed, with docs/api.md as its main page; XML,
-# for Sphinx and Breathe once docs/ has Sphinx sources, into the build
-# tree. The pages carry no timestamp, so regenerating unchanged headers
-# changes no file.
+# Two documentation targets:
+#
+# - `docs` builds the API reference with Doxygen: HTML into docs/api/,
+#   which is committed, with docs/api.md as its main page. The pages carry
+#   no timestamp, so regenerating unchanged headers changes no file.
+# - `manual` builds the manual with Sphinx, MyST, and Breathe: the Markdown
+#   of docs/ and the C++ API from Doxygen XML, as HTML into
+#   build/docs/html/, which is not committed. The XML comes from a Doxygen
+#   run of its own that expands ESPRESSO_NONBLOCKING to nothing, as Sphinx's
+#   C++ parser does not accept an attribute before `override`. The build
+#   fails on any warning.
+#
+# Sphinx and its extensions are tools, not dependencies: install the
+# versions docs/requirements.txt pins, and point SPHINX_EXECUTABLE at their
+# sphinx-build when it is not on the PATH.
 
 find_package(Doxygen)
+find_program(SPHINX_EXECUTABLE NAMES sphinx-build DOC "sphinx-build with myst-parser and breathe installed")
 
 if(DOXYGEN_FOUND)
     set(DOXYGEN_PROJECT_NAME "${PROJECT_NAME}")
     set(DOXYGEN_PROJECT_NUMBER "${PROJECT_VERSION}")
     set(DOXYGEN_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/docs/doxygen")
     set(DOXYGEN_HTML_OUTPUT "${PROJECT_SOURCE_DIR}/docs/api")
-    set(DOXYGEN_GENERATE_XML YES)
     set(DOXYGEN_EXTRACT_ALL NO)
     # A comment's first sentence is its summary, also in /// comments of
     # more than one line.
@@ -31,5 +41,33 @@ if(DOXYGEN_FOUND)
 else()
     add_custom_target(docs
         COMMAND ${CMAKE_COMMAND} -E echo "Doxygen not found; docs target skipped"
+        VERBATIM)
+endif()
+
+if(DOXYGEN_FOUND AND SPHINX_EXECUTABLE)
+    set(DOXYGEN_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/docs/doxygen-xml")
+    set(DOXYGEN_GENERATE_HTML NO)
+    set(DOXYGEN_GENERATE_XML YES)
+    set(DOXYGEN_WARN_IF_UNDOCUMENTED NO)
+    set(DOXYGEN_QUIET YES)
+    set(DOXYGEN_MACRO_EXPANSION YES)
+    set(DOXYGEN_EXPAND_ONLY_PREDEF YES)
+    set(DOXYGEN_PREDEFINED "ESPRESSO_NONBLOCKING=")
+    set(DOXYGEN_USE_MDFILE_AS_MAINPAGE "")
+    doxygen_add_docs(manual-xml "${PROJECT_SOURCE_DIR}/include"
+        COMMENT "Building the C++ API's XML for the manual with Doxygen")
+
+    add_custom_target(manual
+        COMMAND "${SPHINX_EXECUTABLE}" -b html -W --keep-going -q
+                -D "version=${PROJECT_VERSION}" -D "release=${PROJECT_VERSION}"
+                -D "breathe_projects.espresso=${PROJECT_BINARY_DIR}/docs/doxygen-xml/xml"
+                -d "${PROJECT_BINARY_DIR}/docs/doctrees"
+                "${PROJECT_SOURCE_DIR}/docs" "${PROJECT_BINARY_DIR}/docs/html"
+        COMMENT "Building the manual into ${PROJECT_BINARY_DIR}/docs/html with Sphinx"
+        VERBATIM)
+    add_dependencies(manual manual-xml)
+else()
+    add_custom_target(manual
+        COMMAND ${CMAKE_COMMAND} -E echo "Doxygen or sphinx-build not found; manual target skipped"
         VERBATIM)
 endif()
